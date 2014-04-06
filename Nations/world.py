@@ -18,7 +18,7 @@ class world():
 
         x = int(self.width / 2)
         y = int(self.height / 2)
-        self.stagGenerate()
+        self.smallSpiralGenerate()
 
     def generateTile(self, xC, yC):
         """Creates a generic tile"""
@@ -29,7 +29,7 @@ class world():
         """Determines the terrain type for a tile"""
         t = self.tiles[(xC, yC)]
         type = random.random()
-        if(xC == self.width / 2 and yC == self.height / 2):
+        if(xC == 0 or yC == 0 or xC == self.width or yC == self.height):
             t.terrain = 4
             t.calcTileColor()
         else:
@@ -64,18 +64,18 @@ class world():
         forest = 0.001
         desert = 0.001
         mountain = 0.001
-        water = 0.001
+        water = 0.006
         for adj in t.neighbors.values():
             if adj.terrain == -1:
                 pass
             else:
                 #Grass effect
                 if adj.terrain == 0:
-                    grass += 82.5
+                    grass += 84
                     desert += .5
                     forest += 4.5
                     mountain += 1
-                    water += 2
+                    water += .5
                 #Desert effect
                 elif adj.terrain == 1:
                     grass += 10
@@ -84,22 +84,22 @@ class world():
                 #Forest effect
                 elif adj.terrain == 2:
                     grass += 4.5
-                    forest += 92.525
+                    forest += 94.025
                     mountain += .975
-                    water += 2
+                    water += .5
                 #Mountain effect
                 elif adj.terrain == 3:
                     grass += 1
                     desert += 20
                     forest += .975
-                    mountain += 76.025
-                    water += 2
+                    mountain += 77.525
+                    water += .5
                 #Water effect
                 elif adj.terrain == 4:
-                    grass += 2
-                    forest += 2
-                    mountain += 2
-                    water += 94
+                    grass += .5
+                    forest += .5
+                    mountain += .5
+                    water += 98.5
 
         total = grass + forest + desert + mountain + water
         if total == 0:
@@ -158,3 +158,42 @@ class world():
                 self.generateTileTerrain(x, y)
             for y in range(1, self.height + 1, 2):
                 self.generateTileTerrain(x, y)
+
+    def stagGenerateLine(self, xS, yS, xE, yE):
+        if(yS == yE):
+            for x in range(xS, xE + 1, 2):
+                self.generateTileTerrain(x, yS)
+            for x in range(xS + 1, xE + 1, 2):
+                self.generateTileTerrain(x, yS)
+        
+        elif(xS == xE):
+            for y in range(yS, yE + 1, 2):
+                self.generateTileTerrain(xS, y)
+            for y in range(yS + 1, yE + 1, 2):
+                self.generateTileTerrain(xS, y)
+        else:
+            pass
+
+    def altStagGenerate(self):
+        total = self.width * self.height
+        gen = 0
+        x = 0
+        y = 0
+        xE = self.width
+        yE = 0
+        while(gen < total):
+            self.stagGenerateLine(x, y, xE, yE)
+            gen += 1
+            y += 1
+            xE = x
+            yE = self.height
+            self.stagGenerateLine(x, y, xE, yE)
+            gen += 1
+            x += 1
+            yE = y
+            xE = self.width
+
+    def smallSpiralGenerate(self):
+        for x in range(1, self.width, 3):
+            for y in range(1, self.height, 3):
+                self.spiralGenerate((x, y), 8)
