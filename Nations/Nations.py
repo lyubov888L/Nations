@@ -1,6 +1,8 @@
 import os
 import sys
 import pygame
+from world import world
+import tile
 from pygame.locals import *
 
 if not pygame.font: print('Warning, fonts disabled')
@@ -23,12 +25,13 @@ class PyManMain:
         self.red = pygame.Color(255, 0, 0)
         self.green = pygame.Color(0, 255, 0)
         self.blue = pygame.Color(0, 0, 255)
-        self.fontObj = pygame.font.Font('freesansbold.ttf', 32)
+        self.fontObj = pygame.font.Font('freesansbold.ttf', 24)
         msg = 'Nations Initialized'
         #Initialize Mouse position
         self.mousex, self.mousey = (0, 0)
         #Initialize Message
         self.msg = ''
+        self.earth = world(width=self.width, height=self.height)
 
     def MainLoop(self):
         """This is the main loop of the game"""
@@ -40,6 +43,14 @@ class PyManMain:
                 timer = 0
 
             self.screen.fill(pygame.Color(0,0,0))
+            w = self.width
+            h = self.height
+
+            screenArr = pygame.PixelArray(self.screen)
+            for x in range(0, w, 1):
+                for y in range(0, h, 1):
+                    screenArr[x][y] = self.earth.tiles[(x, y)].color
+            del screenArr
 
             msgSurfaceObj = self.fontObj.render(self.msg, False, self.blue)
             msgRectObj = msgSurfaceObj.get_rect()
