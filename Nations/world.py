@@ -3,7 +3,7 @@ import pygame
 import random
 
 class world():
-    """This will create a world in which the simulation takes place"""
+    """This is the world in which the simulation takes place"""
     def __init__(self, width=100, height=100, tiles={}, nations=[]):
         self.width = width
         self.height = height
@@ -16,8 +16,10 @@ class world():
             for y in range(0, self.height + 1):
                self.generateTile(x, y)
 
-        x = int(self.width / 2)
-        y = int(self.height / 2)
+        self.determineBiomes()
+
+        #x = int(self.width / 2)
+        #y = int(self.height / 2)
         self.smallSpiralGenerate()
 
     def generateTile(self, xC, yC):
@@ -60,11 +62,18 @@ class world():
 
     def determineTerrain(self, t):
         terrain = random.random()
-        grass = 0.001
-        forest = 0.001
-        desert = 0.001
-        mountain = 0.001
-        water = 0.006
+        if(t.biome == 0):
+            grass = .004
+            forest = .003
+            desert = .002
+            mountain = .002
+            water = .002
+        else:
+            grass = .00001
+            forest = .00001
+            desert = .00001
+            mountain = .00001
+            water = 1
         for adj in t.neighbors.values():
             if adj.terrain == -1:
                 pass
@@ -152,6 +161,36 @@ class world():
                 if (vY == 0):
                     sL += 1
 
+    def spiralGenerateBiome(self, origin, length, biome):
+        vX = 1
+        vY = 0
+        sL = 1
+
+        pX = origin[0]
+        pY = origin[1]
+        sP = 0
+
+        for k in range(0, length + 1):
+
+            #print('Generating Terrain at ' + str(pX) + ', ' + str(pY))
+            try:
+                self.tiles[(pX, pY)].biome = biome
+                pX += vX
+                pY += vY
+                sP += 1
+                
+                if (sP == sL):
+                    sP = 0
+
+                    buffer = vX
+                    vX = -vY
+                    vY = buffer
+
+                    if (vY == 0):
+                        sL += 1
+            except:
+                pass
+
     def stagGenerate(self):
         for x in range(0, self.width + 1):
             for y in range(0, self.height + 1, 2):
@@ -197,3 +236,32 @@ class world():
         for x in range(1, self.width, 3):
             for y in range(1, self.height, 3):
                 self.spiralGenerate((x, y), 8)
+
+    def determineBiomes(self):
+        biomeSize = 200
+
+        for x in range(biomeSize, self.width, int(biomeSize / 2)):
+            for y in range(biomeSize, self.height, int(biomeSize / 2)):
+                biome = self.determineBiome()
+                self.spiralGenerateBiome((x, y), biomeSize * biomeSize, biome)
+
+
+    def determineBiome(self):
+
+        biome = random.random()
+
+        land = 3
+        water = 7
+        
+        total = land + water
+        
+        landP = land / total
+        waterP = water / total
+
+        if(biome < landP):
+            biome = 0
+        else:
+            biome = 1
+
+        return biome
+

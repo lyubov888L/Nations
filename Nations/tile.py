@@ -26,7 +26,8 @@ class tile():
                  econStr = 0,
                  elevation = 0,
                  color = pygame.Color(0, 0, 0),
-                 neighbors = {}):
+                 neighbors = {},
+                 biome = 0):
 
         self.xCoor = xCoor
         self.yCoor = yCoor
@@ -52,6 +53,7 @@ class tile():
         self.elevation = elevation
         self.color = color
         self.neighbors = neighbors
+        self.biome = biome
 
     #def updateAttrib(self, name, val):
     #    try:
