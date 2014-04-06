@@ -16,9 +16,9 @@ class world():
             for y in range(0, self.height + 1):
                self.generateTile(x, y)
 
-        for x in range(0, self.width + 1):
-            for y in range(0, self.height + 1):
-                self.generateTileTerrain(x, y)
+        x = int(self.width / 2)
+        y = int(self.height / 2)
+        self.stagGenerate()
 
     def generateTile(self, xC, yC):
         """Creates a generic tile"""
@@ -29,7 +29,7 @@ class world():
         """Determines the terrain type for a tile"""
         t = self.tiles[(xC, yC)]
         type = random.random()
-        if(xC == 0 and yC == 0):
+        if(xC == self.width / 2 and yC == self.height / 2):
             t.terrain = 4
             t.calcTileColor()
         else:
@@ -60,63 +60,63 @@ class world():
 
     def determineTerrain(self, t):
         terrain = random.random()
-        grass = 0.0
-        forest = 0.0
-        desert = 0.0
-        mountain = 0.0
-        water = 0.0
+        grass = 0.001
+        forest = 0.001
+        desert = 0.001
+        mountain = 0.001
+        water = 0.001
         for adj in t.neighbors.values():
             if adj.terrain == -1:
                 pass
             else:
                 #Grass effect
                 if adj.terrain == 0:
-                    grass += 95.95
+                    grass += 82.5
                     desert += .5
-                    forest += 2.5
+                    forest += 4.5
                     mountain += 1
-                    water += .05
+                    water += 2
                 #Desert effect
                 elif adj.terrain == 1:
-                    grass += .5
-                    desert += 95
-                    mountain += 4.5
+                    grass += 10
+                    desert += 70
+                    mountain += 20
                 #Forest effect
                 elif adj.terrain == 2:
-                    grass += 2.5
-                    forest += 95.5
-                    mountain += 1.975
-                    water += .025
+                    grass += 4.5
+                    forest += 92.525
+                    mountain += .975
+                    water += 2
                 #Mountain effect
                 elif adj.terrain == 3:
                     grass += 1
-                    desert += 4.5
-                    forest += 1.975
-                    mountain += 92.5
-                    water += .025
+                    desert += 20
+                    forest += .975
+                    mountain += 76.025
+                    water += 2
                 #Water effect
                 elif adj.terrain == 4:
-                    grass += .05
-                    forest += .025
-                    mountain += .025
-                    water += 99.9
+                    grass += 2
+                    forest += 2
+                    mountain += 2
+                    water += 94
 
         total = grass + forest + desert + mountain + water
         if total == 0:
             pass
         grassP = grass / total
-        forestP = forest / total + grassP
-        desertP = desert / total + forestP
-        mountainP = mountain / total + desertP
+        desertP = desert / total + grassP
+        forestP = forest / total + desertP
+        mountainP = mountain / total + forestP
         waterP = water / total + mountainP
 
         if(terrain <= grassP):
             terrain = 0
-        elif(terrain <= forestP and terrain > grassP):
+        elif(terrain <= desertP and terrain > grassP):
             terrain = 1
-        elif(terrain <= desertP and terrain > forestP):
+        elif(terrain <= forestP and terrain > desertP):
             terrain = 2
-        elif(terrain <= mountainP and terrain > desertP):
+        elif(terrain <= mountainP and terrain > forestP):
             terrain = 3
         elif(terrain <= waterP and terrain > mountainP):
             terrain = 4
@@ -125,4 +125,36 @@ class world():
 
         return terrain
 
+    def spiralGenerate(self, origin, length):
+        vX = 1
+        vY = 0
+        sL = 1
+
+        pX = origin[0]
+        pY = origin[1]
+        sP = 0
+
+        for k in range(0, length + 1):
+
+            #print('Generating Terrain at ' + str(pX) + ', ' + str(pY))
+            self.generateTileTerrain(pX, pY)
+            pX += vX
+            pY += vY
+            sP += 1
                 
+            if (sP == sL):
+                sP = 0
+
+                buffer = vX
+                vX = -vY
+                vY = buffer
+
+                if (vY == 0):
+                    sL += 1
+
+    def stagGenerate(self):
+        for x in range(0, self.width + 1):
+            for y in range(0, self.height + 1, 2):
+                self.generateTileTerrain(x, y)
+            for y in range(1, self.height + 1, 2):
+                self.generateTileTerrain(x, y)

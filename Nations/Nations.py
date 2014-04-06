@@ -11,7 +11,7 @@ if not pygame.mixer: print('Warning, sound disabled')
 class PyManMain:
     """The main PyMan class - this class handles the main initialization and creating of the game"""
 
-    def __init__(self, width=640, height=480):
+    def __init__(self, width=640, height=640):
         #Initialize the game
         pygame.init()
         self.fpsClock = pygame.time.Clock()
