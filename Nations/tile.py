@@ -27,7 +27,7 @@ class tile():
                  elevation = 0,
                  color = pygame.Color(0, 0, 0),
                  neighbors = {},
-                 biome = 0):
+                 biome = -1):
 
         self.xCoor = xCoor
         self.yCoor = yCoor

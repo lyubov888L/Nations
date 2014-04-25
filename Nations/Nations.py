@@ -11,7 +11,7 @@ if not pygame.mixer: print('Warning, sound disabled')
 class PyManMain:
     """The main PyMan class - this class handles the main initialization and creating of the game"""
 
-    def __init__(self, width=640, height=640):
+    def __init__(self, width=800, height=400):
         #Initialize the game
         pygame.init()
         self.fpsClock = pygame.time.Clock()
@@ -52,7 +52,7 @@ class PyManMain:
                     screenArr[x][y] = self.earth.tiles[(x, y)].color
             del screenArr
 
-            msgSurfaceObj = self.fontObj.render(self.msg, False, self.blue)
+            msgSurfaceObj = self.fontObj.render(self.msg, False, self.red)
             msgRectObj = msgSurfaceObj.get_rect()
             msgRectObj.topleft = (clickX, clickY)
             self.screen.blit(msgSurfaceObj, msgRectObj)
@@ -68,7 +68,7 @@ class PyManMain:
                 elif event.type == MOUSEBUTTONUP:
                     clickX, clickY = event.pos
                     if event.button == 1:
-                        self.msg = 'left click'
+                        self.msg = 'Biome: ' + str(self.earth.tiles[(clickX, clickY)].biome)
                     elif event.button == 2:
                         self.msg = 'middle click'
                     elif event.button == 3:

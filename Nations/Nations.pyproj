@@ -22,6 +22,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="biome.py" />
     <Compile Include="Nations.py" />
     <Compile Include="tile.py" />
     <Compile Include="world.py" />

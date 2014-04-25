@@ -4,11 +4,24 @@ import random
 
 class world():
     """This is the world in which the simulation takes place"""
-    def __init__(self, width=100, height=100, tiles={}, nations=[]):
+    def __init__(self, width=100, 
+                 height=100, 
+                 tiles={}, 
+                 nations=[], 
+                 biomes={}, 
+                 biomeSize = 200, 
+                 subBiomeSize = 30, 
+                 biomeStrength = .5,
+                 fuzzing = 1):
         self.width = width
         self.height = height
         self.tiles = tiles
         self.nations = nations
+        self.biomes = biomes
+        self.biomeSize = biomeSize
+        self.subBiomeSize = subBiomeSize
+        self.biomeStrength = biomeStrength
+        self.fuzzing = fuzzing
         self.createWorld()
 
     def createWorld(self):
@@ -17,10 +30,10 @@ class world():
                self.generateTile(x, y)
 
         self.determineBiomes()
-
-        #x = int(self.width / 2)
-        #y = int(self.height / 2)
-        self.smallSpiralGenerate()
+        self.determineSubBiomes() 
+        for z in range(0, self.fuzzing):
+            print('Fuzzing layer:', str(z + 1), 'of', self.fuzzing)
+            self.altStagGenerate() 
 
     def generateTile(self, xC, yC):
         """Creates a generic tile"""
@@ -62,29 +75,84 @@ class world():
 
     def determineTerrain(self, t):
         terrain = random.random()
-        if(t.biome == 0):
-            grass = .004
-            forest = .003
-            desert = .002
-            mountain = .002
-            water = .002
+        #Ungenerated Biome effect
+        if(t.biome == -1):
+            grass = .01 * self.biomeStrength
+            forest = .01 * self.biomeStrength
+            desert = .01 * self.biomeStrength
+            mountain = .01 * self.biomeStrength
+            water = .01 * self.biomeStrength
+        #Land biome effect
+        elif(t.biome == 0):
+            grass = .0005 * self.biomeStrength
+            forest = .0004 * self.biomeStrength
+            desert = .0001 * self.biomeStrength
+            mountain = .0002 * self.biomeStrength
+            water = .0001 * self.biomeStrength
+        #Water biome effect 
+        elif(t.biome == 1):
+            grass = .00001 * self.biomeStrength
+            forest = .00001 * self.biomeStrength
+            desert = .00001 * self.biomeStrength
+            mountain = .00001 * self.biomeStrength
+            water = .01 * self.biomeStrength
+        #Grass biome effect
+        elif(t.biome == 2):
+            grass = .01 * self.biomeStrength
+            forest = .001 * self.biomeStrength
+            desert = .001 * self.biomeStrength
+            mountain = .001 * self.biomeStrength
+            water = .001 * self.biomeStrength
+        #Desert biome effect
+        elif(t.biome == 3):
+            grass = .0001 * self.biomeStrength
+            forest = .000001 * self.biomeStrength
+            desert = .01 * self.biomeStrength
+            mountain = .0005 * self.biomeStrength
+            water = .000001 * self.biomeStrength
+        #Forest biome effect
+        elif(t.biome == 4):
+            grass = .005 * self.biomeStrength
+            forest = .01 * self.biomeStrength
+            desert = .0000001 * self.biomeStrength
+            mountain = .0005 * self.biomeStrength
+            water = .0001 * self.biomeStrength
+
+        #Mountain biome effect
+        elif(t.biome == 5):
+            grass = .000001 * self.biomeStrength
+            forest = .005 * self.biomeStrength
+            desert = .001 * self.biomeStrength
+            mountain = .01 * self.biomeStrength
+            water = .000001 * self.biomeStrength
+
+        #Lake biome effect
+        elif(t.biome == 6):
+            grass = .005 * self.biomeStrength
+            forest = .005 * self.biomeStrength
+            desert = .00000001 * self.biomeStrength
+            mountain = .0001 * self.biomeStrength
+            water = .01 * self.biomeStrength
+
         else:
-            grass = .00001
-            forest = .00001
-            desert = .00001
-            mountain = .00001
-            water = 1
+            #print(t.biome)
+            grass = .1 * self.biomeStrength
+            forest = .1 * self.biomeStrength
+            desert = .1 * self.biomeStrength
+            mountain = .1 * self.biomeStrength
+            water = .1 * self.biomeStrength
+
         for adj in t.neighbors.values():
             if adj.terrain == -1:
                 pass
             else:
                 #Grass effect
                 if adj.terrain == 0:
-                    grass += 84
+                    grass += 84.49
                     desert += .5
                     forest += 4.5
                     mountain += 1
-                    water += .5
+                    water += .01
                 #Desert effect
                 elif adj.terrain == 1:
                     grass += 10
@@ -93,22 +161,22 @@ class world():
                 #Forest effect
                 elif adj.terrain == 2:
                     grass += 4.5
-                    forest += 94.025
+                    forest += 94.415
                     mountain += .975
-                    water += .5
+                    water += .01
                 #Mountain effect
                 elif adj.terrain == 3:
                     grass += 1
                     desert += 20
                     forest += .975
-                    mountain += 77.525
-                    water += .5
+                    mountain += 78.015
+                    water += .01
                 #Water effect
                 elif adj.terrain == 4:
-                    grass += .5
-                    forest += .5
-                    mountain += .5
-                    water += 98.5
+                    grass += .01
+                    forest += .01
+                    mountain += .01
+                    water += 99.97
 
         total = grass + forest + desert + mountain + water
         if total == 0:
@@ -161,7 +229,8 @@ class world():
                 if (vY == 0):
                     sL += 1
 
-    def spiralGenerateBiome(self, origin, length, biome):
+    def spiralGenerateBiome(self, origin = (-1, -1), length = -1, biome = -2):
+      
         vX = 1
         vY = 0
         sL = 1
@@ -172,9 +241,9 @@ class world():
 
         for k in range(0, length + 1):
 
-            #print('Generating Terrain at ' + str(pX) + ', ' + str(pY))
             try:
-                self.tiles[(pX, pY)].biome = biome
+                t = self.tiles[(pX, pY)]
+                t.biome = biome
                 pX += vX
                 pY += vY
                 sP += 1
@@ -200,37 +269,40 @@ class world():
 
     def stagGenerateLine(self, xS, yS, xE, yE):
         if(yS == yE):
-            for x in range(xS, xE + 1, 2):
-                self.generateTileTerrain(x, yS)
-            for x in range(xS + 1, xE + 1, 2):
-                self.generateTileTerrain(x, yS)
+            if(xS > xE):
+                for x in range(xS, xE, -2):
+                    self.generateTileTerrain(x, yS)
+                for x in range(xS + 1, xE, -2):
+                    self.generateTileTerrain(x, yS)
+
+            else:
+                for x in range(xS, xE, 2):
+                    self.generateTileTerrain(x, yS)
+                for x in range(xS + 1, xE, 2):
+                    self.generateTileTerrain(x, yS)
         
         elif(xS == xE):
-            for y in range(yS, yE + 1, 2):
-                self.generateTileTerrain(xS, y)
-            for y in range(yS + 1, yE + 1, 2):
-                self.generateTileTerrain(xS, y)
+            if(yS > yE):
+                for y in range(yS, yE, -2):
+                    self.generateTileTerrain(xS, y)
+                for y in range(yS + 1, yE, -2):
+                    self.generateTileTerrain(xS, y)
+
+            else:
+                for y in range(yS, yE, 2):
+                    self.generateTileTerrain(xS, y)
+                for y in range(yS + 1, yE, 2):
+                    self.generateTileTerrain(xS, y)
         else:
-            pass
+            print('Line is diaganol')
 
     def altStagGenerate(self):
-        total = self.width * self.height
-        gen = 0
-        x = 0
-        y = 0
-        xE = self.width
-        yE = 0
-        while(gen < total):
-            self.stagGenerateLine(x, y, xE, yE)
-            gen += 1
-            y += 1
-            xE = x
-            yE = self.height
-            self.stagGenerateLine(x, y, xE, yE)
-            gen += 1
-            x += 1
-            yE = y
-            xE = self.width
+        xS = 0
+        xE = self.width - 1
+        for y in range(0, self.height, 2):
+            self.stagGenerateLine(xS, y, xE, y)
+        for y in range(1, self.height, 2):
+            self.stagGenerateLine(xE, y, xS, y)
 
     def smallSpiralGenerate(self):
         for x in range(1, self.width, 3):
@@ -238,13 +310,56 @@ class world():
                 self.spiralGenerate((x, y), 8)
 
     def determineBiomes(self):
-        biomeSize = 200
 
-        for x in range(biomeSize, self.width, int(biomeSize / 2)):
-            for y in range(biomeSize, self.height, int(biomeSize / 2)):
+        for x in range(0, self.width, int(self.biomeSize / 2)):
+            for y in range(0, self.height, int(self.biomeSize / 2)):
                 biome = self.determineBiome()
-                self.spiralGenerateBiome((x, y), biomeSize * biomeSize, biome)
+                self.spiralGenerateBiome((x, y), (self.biomeSize * self.biomeSize), biome)
 
+        print('Biomes Generated')
+
+    def determineSubBiomes(self):
+        
+        for x in range(0, self.width, int(self.subBiomeSize)):
+            for y in range(0, self.height, int(self.subBiomeSize)):
+                t = self.tiles[(x, y)]
+                biome = self.determineSubBiome(t.biome)
+                self.spiralGenerateBiome((x, y), self.subBiomeSize * self.subBiomeSize, biome)
+        print('Subbiomes Generated')
+
+    def determineSubBiome(self, biome):
+        if biome == 1:
+            return 1
+        else:
+            biome = random.random()
+
+            grass = 3.0
+            desert = 3.3
+            forest = 2.0
+            mountain = 2.4
+            water = .01
+
+            total = grass + desert + forest + mountain + water
+            grassP = grass / total
+            desertP = desert / total + grassP
+            forestP = forest / total + desertP
+            mountainP = mountain / total + forestP
+            waterP = water / total + mountainP
+
+            if(biome < grassP):
+                biome = 2
+            elif(biome < desertP and biome >= grassP):
+                biome = 3
+            elif(biome < forestP and biome >= desertP):
+                biome = 4
+            elif(biome < mountainP and biome >= forestP):
+                biome = 5
+            elif(biome < waterP and biome >= mountainP):
+                biome = 6
+            else:
+                biome = 6
+
+            return biome
 
     def determineBiome(self):
 
