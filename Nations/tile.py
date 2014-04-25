@@ -24,7 +24,7 @@ class tile():
                  nationality = '',
                  econProj = 0,
                  econStr = 0,
-                 elevation = 0,
+                 roughness = 0,
                  color = pygame.Color(0, 0, 0),
                  neighbors = {},
                  biome = -1):
@@ -50,7 +50,7 @@ class tile():
         self.nationality = nationality
         self.econProj = econProj
         self.econStr = econStr
-        self.elevation = elevation
+        self.roughness = roughness
         self.color = color
         self.neighbors = neighbors
         self.biome = biome

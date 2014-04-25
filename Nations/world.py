@@ -33,7 +33,10 @@ class world():
         self.determineSubBiomes() 
         for z in range(0, self.fuzzing):
             print('Fuzzing layer:', str(z + 1), 'of', self.fuzzing)
-            self.altStagGenerate() 
+            self.altStagGenerate()
+            
+        self.generateResources()
+        print('Resources generated') 
 
     def generateTile(self, xC, yC):
         """Creates a generic tile"""
@@ -202,33 +205,6 @@ class world():
 
         return terrain
 
-    def spiralGenerate(self, origin, length):
-        vX = 1
-        vY = 0
-        sL = 1
-
-        pX = origin[0]
-        pY = origin[1]
-        sP = 0
-
-        for k in range(0, length + 1):
-
-            #print('Generating Terrain at ' + str(pX) + ', ' + str(pY))
-            self.generateTileTerrain(pX, pY)
-            pX += vX
-            pY += vY
-            sP += 1
-                
-            if (sP == sL):
-                sP = 0
-
-                buffer = vX
-                vX = -vY
-                vY = buffer
-
-                if (vY == 0):
-                    sL += 1
-
     def spiralGenerateBiome(self, origin = (-1, -1), length = -1, biome = -2):
       
         vX = 1
@@ -304,11 +280,6 @@ class world():
         for y in range(1, self.height, 2):
             self.stagGenerateLine(xE, y, xS, y)
 
-    def smallSpiralGenerate(self):
-        for x in range(1, self.width, 3):
-            for y in range(1, self.height, 3):
-                self.spiralGenerate((x, y), 8)
-
     def determineBiomes(self):
 
         for x in range(0, self.width, int(self.biomeSize / 2)):
@@ -379,4 +350,77 @@ class world():
             biome = 1
 
         return biome
+
+    def generateResources(self):
+        for x in range(self.width + 1):
+            for y in range(self.height + 1):
+                t = self.tiles[(x, y)]
+                self.generateTileResources(t)
+
+    def generateTileResources(self, tile):
+        if tile.terrain == 4:
+            #Water effect
+            tile.population = 0
+            tile.food = 100
+            tile.water = 100
+
+        elif tile.terrain == 0:
+            #Grasslands effect
+            roll = 2*random.random()
+            tile.population = int(6 * roll)
+            roll = 2*random.random()
+            tile.food = 10 * roll
+            roll = 2*random.random()
+            tile.ore = 1 * roll
+            roll = 2*random.random()
+            tile.water = 10 * roll
+            roll = 2*random.random()
+            tile.wood = 5 * roll
+            roll = 2*random.random()
+            tile.roughness = 5 * roll
+
+        elif tile.terrain == 1:
+            #Desert Effect
+            roll = 2*random.random()
+            tile.population = int(.5 * roll)
+            roll = 2*random.random()
+            tile.food = int(.5 * roll)
+            roll = 2*random.random()
+            tile.ore = 15 * roll
+            roll = 2*random.random()
+            tile.water = int(.5 * roll)
+            roll = 2*random.random()
+            tile.wood = 0
+            tile.roughness = 30 * roll
+
+        elif tile.terrain == 2:
+            #Forest Effect
+            roll = 2*random.random()
+            tile.population = int(5 * roll)
+            roll = 2*random.random()
+            tile.food = 5 * roll
+            roll = 2*random.random()
+            tile.ore = 5 * roll
+            roll = 2*random.random()
+            tile.water = 15 * roll
+            roll = 2*random.random()
+            tile.wood = 40 * roll
+            roll = 2*random.random()
+            tile.roughness = 40 * roll
+
+        elif tile.terrain == 3:
+            #Mountain Effect
+            roll = 2*random.random()
+            tile.population = int(3 * roll)
+            roll = 2*random.random()
+            tile.food = 3 * roll
+            roll = 2*random.random()
+            tile.ore = 30 * roll
+            roll = 2*random.random()
+            tile.water = 5 * roll
+            roll = 2*random.random()
+            tile.wood = 5 * roll
+            roll = 2*random.random()
+            tile.roughness = 50 * roll
+
 
