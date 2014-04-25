@@ -27,7 +27,8 @@ class tile():
                  roughness = 0,
                  color = pygame.Color(0, 0, 0),
                  neighbors = {},
-                 biome = -1):
+                 biome = -1,
+                 owner = None):
 
         self.xCoor = xCoor
         self.yCoor = yCoor
@@ -54,6 +55,7 @@ class tile():
         self.color = color
         self.neighbors = neighbors
         self.biome = biome
+        self.owner = owner
 
     #def updateAttrib(self, name, val):
     #    try:
@@ -63,22 +65,68 @@ class tile():
     #        print('Name: ' + name)
     #        print('Value: ' + val)
 
-    def calcTileColor(self):
+    def calcTileColor(self, mode=0):
         """Updates the color of the tile"""
         red = 0
         green = 0
         blue = 0
-        if(self.population < 500):
-            #Ungenerated
-            if(self.terrain == -1):
+        if mode == 0:
+            #Geographical View
+            if(self.population < 500):
+                #Ungenerated
+                if(self.terrain == -1):
+                    pass
+                #Grassland
+                elif(self.terrain == 0):
+                    green = 200
+                #Desert
+                elif(self.terrain == 1):
+                    red = 200
+                    green = 200
+                #Forest
+                elif(self.terrain == 2):
+                    green = 110
+                #Mountain
+                elif(self.terrain == 3):
+                    red = 149
+                    green = 112
+                    blue = 40
+                #Water
+                elif(self.terrain == 4):
+                    blue = 200
+                #Small Road
+                if(self.infra > 10 and self.infra < 20):
+                    red = 200
+                    green = 110
+                #Large Road
+                elif(self.infra >= 20):
+                    red = 70
+                    green = 70
+                    blue = 70
+            else:
+                red = 200
+                green = 200
+                blue = 200
+
+        elif mode == 1:
+            try:
+                nationColor = self.owner.color
+            except:
+                nationColor = (0, 0, 0) #R G B
+            #Political View
+            if self.terrain == 4:
+                #Water
+                blue = 200
+           #Ungenerated
+            elif(self.terrain == -1):
                 pass
             #Grassland
             elif(self.terrain == 0):
-                green = 200
+                green = 200               
             #Desert
             elif(self.terrain == 1):
                 red = 200
-                green = 200
+                green = 200                
             #Forest
             elif(self.terrain == 2):
                 green = 110
@@ -99,8 +147,17 @@ class tile():
                 red = 70
                 green = 70
                 blue = 70
-        else:
-            red = 200
-            green = 200
-            blue = 200
+
+            if self.terrain != 4:
+                red += nationColor[0]
+                green += nationColor[1]
+                blue += nationColor[2]
+
+            if red > 255:
+                red = 255
+            if green > 255:
+                green = 255
+            if blue > 255:
+                blue = 255
+
         self.color = pygame.Color(red, green, blue)

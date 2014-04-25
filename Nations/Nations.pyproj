@@ -23,6 +23,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="biome.py" />
+    <Compile Include="nation.py" />
     <Compile Include="Nations.py" />
     <Compile Include="tile.py" />
     <Compile Include="world.py" />

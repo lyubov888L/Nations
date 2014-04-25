@@ -67,16 +67,22 @@ class PyManMain:
 
                 elif event.type == MOUSEBUTTONUP:
                     clickX, clickY = event.pos
+                    t = self.earth.tiles[(clickX, clickY)]
                     if event.button == 1:
-                        self.msg = 'Biome: ' + str(self.earth.tiles[(clickX, clickY)].biome)
+                        #Left Click
+                        self.msg = 'Biome: ' + str(t.biome)
                     elif event.button == 2:
-                        self.msg = 'middle click'
+                        #Middle Click
+                        self.msg = 'Population: ' + str(t.population)
                     elif event.button == 3:
-                        self.msg = 'right click'
+                        #Right Click
+                        self.msg = 'Terrain: ' + str(t.terrain)
                     elif event.button == 4:
-                        self.msg = 'scroll up'
+                        #Scroll up
+                        self.earth.changeViewMode(0)
                     elif event.button == 5:
-                        self.msg = 'scroll down'
+                        #Scroll down
+                        self.earth.changeViewMode(1)
 
                 elif event.type == KEYDOWN:
                     if event.key == K_LEFT:

@@ -1,6 +1,7 @@
 from tile import tile
 import pygame
 import random
+from nation import nation
 
 class world():
     """This is the world in which the simulation takes place"""
@@ -12,7 +13,9 @@ class world():
                  biomeSize = 200, 
                  subBiomeSize = 30, 
                  biomeStrength = .5,
-                 fuzzing = 1):
+                 fuzzing = 1,
+                 viewMode = 0):
+
         self.width = width
         self.height = height
         self.tiles = tiles
@@ -22,21 +25,28 @@ class world():
         self.subBiomeSize = subBiomeSize
         self.biomeStrength = biomeStrength
         self.fuzzing = fuzzing
+        self.viewMode = viewMode
         self.createWorld()
+        
 
     def createWorld(self):
+        print('Creating tiles')
         for x in range(0, self.width + 1):
             for y in range(0, self.height + 1):
                self.generateTile(x, y)
 
+        print('Determining biomes')
         self.determineBiomes()
+        print('Determining sub biomes')
         self.determineSubBiomes() 
         for z in range(0, self.fuzzing):
             print('Fuzzing layer:', str(z + 1), 'of', self.fuzzing)
             self.altStagGenerate()
             
+        print('Generating Resources')
         self.generateResources()
-        print('Resources generated') 
+        print('Finding Nations')
+        self.findNations()
 
     def generateTile(self, xC, yC):
         """Creates a generic tile"""
@@ -80,70 +90,76 @@ class world():
         terrain = random.random()
         #Ungenerated Biome effect
         if(t.biome == -1):
-            grass = .01 * self.biomeStrength
-            forest = .01 * self.biomeStrength
-            desert = .01 * self.biomeStrength
-            mountain = .01 * self.biomeStrength
-            water = .01 * self.biomeStrength
+            grass = .01 
+            forest = .01 
+            desert = .01 
+            mountain = .01 
+            water = .01 
         #Land biome effect
         elif(t.biome == 0):
-            grass = .0005 * self.biomeStrength
-            forest = .0004 * self.biomeStrength
-            desert = .0001 * self.biomeStrength
-            mountain = .0002 * self.biomeStrength
-            water = .0001 * self.biomeStrength
+            grass = .0005 
+            forest = .0004 
+            desert = .0001 
+            mountain = .0002 
+            water = .0001 
         #Water biome effect 
         elif(t.biome == 1):
-            grass = .00001 * self.biomeStrength
-            forest = .00001 * self.biomeStrength
-            desert = .00001 * self.biomeStrength
-            mountain = .00001 * self.biomeStrength
-            water = .01 * self.biomeStrength
+            grass = .00001 
+            forest = .00001 
+            desert = .00001 
+            mountain = .00001 
+            water = .01 
         #Grass biome effect
         elif(t.biome == 2):
-            grass = .01 * self.biomeStrength
-            forest = .001 * self.biomeStrength
-            desert = .001 * self.biomeStrength
-            mountain = .001 * self.biomeStrength
-            water = .001 * self.biomeStrength
+            grass = .01 
+            forest = .001 
+            desert = .001 
+            mountain = .001 
+            water = .001 
         #Desert biome effect
         elif(t.biome == 3):
-            grass = .0001 * self.biomeStrength
-            forest = .000001 * self.biomeStrength
-            desert = .01 * self.biomeStrength
-            mountain = .0005 * self.biomeStrength
-            water = .000001 * self.biomeStrength
+            grass = .0001 
+            forest = .000001 
+            desert = .01 
+            mountain = .0005 
+            water = .000001 
         #Forest biome effect
         elif(t.biome == 4):
-            grass = .005 * self.biomeStrength
-            forest = .01 * self.biomeStrength
-            desert = .0000001 * self.biomeStrength
-            mountain = .0005 * self.biomeStrength
-            water = .0001 * self.biomeStrength
+            grass = .005 
+            forest = .01 
+            desert = .0000001 
+            mountain = .0005 
+            water = .0001 
 
         #Mountain biome effect
         elif(t.biome == 5):
-            grass = .000001 * self.biomeStrength
-            forest = .005 * self.biomeStrength
-            desert = .001 * self.biomeStrength
-            mountain = .01 * self.biomeStrength
-            water = .000001 * self.biomeStrength
+            grass = .000001 
+            forest = .005 
+            desert = .001 
+            mountain = .01 
+            water = .000001
 
         #Lake biome effect
         elif(t.biome == 6):
-            grass = .005 * self.biomeStrength
-            forest = .005 * self.biomeStrength
-            desert = .00000001 * self.biomeStrength
-            mountain = .0001 * self.biomeStrength
-            water = .01 * self.biomeStrength
+            grass = .005 
+            forest = .005 
+            desert = .00000001 
+            mountain = .0001 
+            water = .01 
 
         else:
             #print(t.biome)
-            grass = .1 * self.biomeStrength
-            forest = .1 * self.biomeStrength
-            desert = .1 * self.biomeStrength
-            mountain = .1 * self.biomeStrength
-            water = .1 * self.biomeStrength
+            grass = .1 
+            forest = .1
+            desert = .1
+            mountain = .1 
+            water = .1 
+
+        grass = grass * self.biomeStrength
+        forest = forest * self.biomeStrength
+        desert = desert * self.biomeStrength
+        mountain = mountain * self.biomeStrength
+        water = water * self.biomeStrength
 
         for adj in t.neighbors.values():
             if adj.terrain == -1:
@@ -287,7 +303,6 @@ class world():
                 biome = self.determineBiome()
                 self.spiralGenerateBiome((x, y), (self.biomeSize * self.biomeSize), biome)
 
-        print('Biomes Generated')
 
     def determineSubBiomes(self):
         
@@ -296,7 +311,6 @@ class world():
                 t = self.tiles[(x, y)]
                 biome = self.determineSubBiome(t.biome)
                 self.spiralGenerateBiome((x, y), self.subBiomeSize * self.subBiomeSize, biome)
-        print('Subbiomes Generated')
 
     def determineSubBiome(self, biome):
         if biome == 1:
@@ -367,7 +381,7 @@ class world():
         elif tile.terrain == 0:
             #Grasslands effect
             roll = 2*random.random()
-            tile.population = int(6 * roll)
+            tile.population = int(20 * roll)
             roll = 2*random.random()
             tile.food = 10 * roll
             roll = 2*random.random()
@@ -423,4 +437,34 @@ class world():
             roll = 2*random.random()
             tile.roughness = 50 * roll
 
+    def changeViewMode(self, mode):
+        for x in range(self.width):
+            for y in range(self.height):
+                t = self.tiles[(x,y)]
+                t.calcTileColor(mode)
 
+    def findNations(self):
+        for x in range(self.width):
+            for y in range(self.height):
+                t = self.tiles[(x,y)]
+                if t.population >= 39:
+                    n = nation()
+                    r = int(random.random() * 255)
+                    g = int(random.random() * 255)
+                    b = int(random.random() * 255)
+                    n.color = (r, g, b)
+                    n.tiles.append(t)
+                    t.owner = n
+                    print('Nation found at', str(t.xCoor) + ',', str(t.yCoor), 'with population', str(t.population)) 
+                    for a in range(t.xCoor - 3, t.xCoor + 3):
+                        if a < 0 or a > self.width:
+                            pass
+                        else:
+                            for b in range(t.yCoor - 3, t.yCoor + 3):
+                                if b < 0 or b > self.height:
+                                    pass
+                                else:
+                                    ti = self.tiles[(a, b)]
+                                    if (ti not in n.tiles) and ti.owner == None:
+                                        n.tiles.append(ti)
+                                        ti.owner = n
