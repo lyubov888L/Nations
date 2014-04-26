@@ -449,11 +449,13 @@ class world():
                 t = self.tiles[(x,y)]
                 if t.population >= 39:
                     n = nation()
+                    n.name = str((x, y))
                     r = int(random.random() * 255)
                     g = int(random.random() * 255)
                     b = int(random.random() * 255)
                     n.color = (r, g, b)
                     n.tiles.append(t)
+                    self.nations.append(n)
                     t.owner = n
                     print('Nation found at', str(t.xCoor) + ',', str(t.yCoor), 'with population', str(t.population)) 
                     for a in range(t.xCoor - 3, t.xCoor + 3):

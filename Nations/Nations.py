@@ -95,10 +95,19 @@ class PyManMain:
                         self.msg = 'down arrow key'
                     elif event.key == K_a:
                         self.msg = 'a key'
+                    elif event.key == K_BACKQUOTE:
+                        command = input('\n')
+                        while command != 'quit':
+                            try:
+                                eval(command)
+                                command = input('\n')
+                            except:
+                                print('Exception executing command')
+                                command = input('\n')
                     elif event.key == K_ESCAPE:
                         pygame.event.post(pygame.event.Event(QUIT))
             pygame.display.update()
-            self.fpsClock.tick(60)
+            self.fpsClock.tick(30)
             timer += 1
 
 if __name__ == "__main__":

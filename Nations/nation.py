@@ -18,7 +18,8 @@ class nation(object):
                  econStr = 0,
                  tiles = [],
                  cities = [],
-                 roads = []):
+                 roads = [],
+                 name = ''):
 
         self.color = color
         self.population = population
@@ -37,6 +38,7 @@ class nation(object):
         self.tiles = tiles
         self.cities = cities
         self.roads = roads
+        self.name = name
          
     def scanResources(self):
         for tile in self.tiles:
