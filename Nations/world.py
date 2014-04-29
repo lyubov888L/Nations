@@ -14,7 +14,8 @@ class world():
                  subBiomeSize = 30, 
                  biomeStrength = .5,
                  fuzzing = 1,
-                 viewMode = 0):
+                 viewMode = 0,
+                 unclaimed = []):
 
         self.width = width
         self.height = height
@@ -26,6 +27,7 @@ class world():
         self.biomeStrength = biomeStrength
         self.fuzzing = fuzzing
         self.viewMode = viewMode
+        self.unclaimed = unclaimed
         self.createWorld()
         
 
@@ -449,6 +451,7 @@ class world():
                 t = self.tiles[(x,y)]
                 if t.population >= 39:
                     n = nation()
+                    n.world = self
                     n.name = str((x, y))
                     r = int(random.random() * 255)
                     g = int(random.random() * 255)
@@ -457,7 +460,7 @@ class world():
                     n.tiles.append(t)
                     self.nations.append(n)
                     t.owner = n
-                    print('Nation found at', str(t.xCoor) + ',', str(t.yCoor), 'with population', str(t.population)) 
+                    #print('Nation found at', str(t.xCoor) + ',', str(t.yCoor), 'with population', str(t.population)) 
                     for a in range(t.xCoor - 3, t.xCoor + 3):
                         if a < 0 or a > self.width:
                             pass
@@ -470,3 +473,102 @@ class world():
                                     if (ti not in n.tiles) and ti.owner == None:
                                         n.tiles.append(ti)
                                         ti.owner = n
+
+    def updateUnclaimedLand(self):
+        for x in range(0, self.width):
+            for y in range(0, self.height):
+                t = self.tiles[(x, y)]
+                if t.owner != None:
+                    pass
+                elif t.terrain == 4:
+                    pass
+                else:
+                    for n in t.neighbors:
+                        neighbor = self.tiles[n]
+                        if neighbor.owner == None:
+                            pass
+                        else:
+                            roll = random.random()
+                            posMod = neighbor.infra + neighbor.population
+                            negMod = neighbor.roughness + 1
+                            total = posMod + negMod
+                            chance = posMod / total
+                            if roll < chance:
+                                neighbor.owner.claimTile(tile)
+
+    def updateBorders(self):
+        for x in range(0, self.width):
+            for y in range(0, self.height):
+                t = self.tiles[(x, y)]
+                if t.owner == None:
+                    pass
+                elif t.terrain == 4:
+                    pass
+                else:
+                    border = False
+                    for n in t.neighbors:
+                        neighbor = self.tiles[n]
+                        if neighbor.owner == None:
+                            border = True
+                            break
+                    if border:
+                        t.owner.borders.append(t)
+                    elif t in t.owner.borders and border == False:
+                        t.owner.borders.remove(t)
+
+    def updateResources(self):
+        for x in range(0, self.width):
+            for y in range(0, self.height):
+                t = self.tiles[(x, y)]
+                if t.owner == None:
+                    pass
+                else:
+                    t.owner.population += t.population
+                    t.owner.food += t.food
+                    t.owner.wealth += t.wealth
+                    t.owner.energyStr += t.energyStr
+                    t.owner.infra += t.infra
+                    t.owner.ore += t.ore
+                    t.owner.water += t.water
+                    t.owner.wood += t.wood
+                    t.owner.landStr += t.landStr
+                    t.owner.airStr += t.airStr
+                    t.owner.waterStr += t.waterStr
+                    t.owner.econStr += t.econStr
+
+    def checkNation(self, country):
+        self.famine(country)
+        country.updateReadout()
+            
+
+    def updateNations(self):
+        for n in self.nations:
+            self.checkNation(n)
+
+    def famine(self, country):
+        if country.population < country.food:
+            return
+        else:
+            count = 0
+            while(count < len(country.tiles) and country.food < country.population):
+                t = country.tiles[count]
+                if t.food < t.population:
+                    t.population -= 1
+                    country.population -= 1
+                count += 1
+            if country.population == 0:
+                print('Nation', country.name, 'was destroyed by famine')
+                for t in country.tiles:
+                    t.owner = None
+                    country.tiles.remove(t)
+                self.nations.remove(country)
+
+    def updateWorld(self):
+        print('Updating unclaimed land')
+        self.updateUnclaimedLand()
+        print('Updating borders')
+        self.updateBorders()
+        print('Updating resources')
+        self.updateResources()
+        print('Updating nations')
+        self.updateNations()

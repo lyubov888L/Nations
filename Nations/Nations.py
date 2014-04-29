@@ -31,7 +31,7 @@ class PyManMain:
         self.mousex, self.mousey = (0, 0)
         #Initialize Message
         self.msg = ''
-        self.earth = world(width=self.width, height=self.height)
+        self.earth = world(width=self.width, height=self.height, viewMode = 1)
 
     def MainLoop(self):
         """This is the main loop of the game"""
@@ -41,6 +41,8 @@ class PyManMain:
         while True:
             if timer > 10000:
                 timer = 0
+
+                    
 
             self.screen.fill(pygame.Color(0,0,0))
             w = self.width
@@ -73,7 +75,10 @@ class PyManMain:
                         self.msg = 'Biome: ' + str(t.biome)
                     elif event.button == 2:
                         #Middle Click
-                        self.msg = 'Population: ' + str(t.population)
+                        try:
+                            self.msg = t.owner.readout
+                        except:
+                            self.msg = 'Unclaimed Land'
                     elif event.button == 3:
                         #Right Click
                         self.msg = 'Terrain: ' + str(t.terrain)
@@ -95,6 +100,8 @@ class PyManMain:
                         self.msg = 'down arrow key'
                     elif event.key == K_a:
                         self.msg = 'a key'
+                    elif event.key == K_RETURN:
+                        self.earth.updateWorld()      
                     elif event.key == K_BACKQUOTE:
                         command = input('\n')
                         while command != 'quit':
@@ -106,6 +113,7 @@ class PyManMain:
                                 command = input('\n')
                     elif event.key == K_ESCAPE:
                         pygame.event.post(pygame.event.Event(QUIT))
+
             pygame.display.update()
             self.fpsClock.tick(30)
             timer += 1

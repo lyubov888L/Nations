@@ -1,3 +1,5 @@
+import random
+
 class nation(object):
     """A nation that manages resources and expands"""
 
@@ -19,7 +21,10 @@ class nation(object):
                  tiles = [],
                  cities = [],
                  roads = [],
-                 name = ''):
+                 name = '',
+                 borders = [],
+                 world = None,
+                 readout = ''):
 
         self.color = color
         self.population = population
@@ -39,19 +44,16 @@ class nation(object):
         self.cities = cities
         self.roads = roads
         self.name = name
-         
-    def scanResources(self):
-        for tile in self.tiles:
-            self.population += tile.population
-            self.food += tile.food
-            self.wealth += tile.wealth
-            self.energyStr += tile.energyStr
-            self.infra += tile.infra
-            self.ore += tile.ore
-            self.water += tile.water
-            self.wood += tile.wood
-            self.landStr += tile.landStr
-            self.airStr += tile.airStr
-            self.waterStr += tile.waterStr
-            self.econStr += tile.econStr
+        self.borders = borders
+        self.world = world
+        self.readout = readout
+    
+                
+    def claimTile(self, t):
+        t.owner = self
+        self.tiles.append(t)
 
+    def updateReadout(self):
+        self.readout += 'Name: ' + str(self.name) + '\r\n'
+        self.readout += 'Population: ' + str(self.population) + '\r\n'
+        self.readout += 'Food: ' + str(self.food) + '\r\n'
