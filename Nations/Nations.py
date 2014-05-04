@@ -72,16 +72,21 @@ class PyManMain:
                     t = self.earth.tiles[(clickX, clickY)]
                     if event.button == 1:
                         #Left Click
-                        self.msg = 'Biome: ' + str(t.biome)
+                        #self.msg = 'Biome: ' + str(t.biome)
+                        print('Biome', str(t.biome))
                     elif event.button == 2:
                         #Middle Click
                         try:
-                            self.msg = t.owner.readout
+                            #self.msg = t.owner.readout
+                            print(t.owner.readout)
                         except:
-                            self.msg = 'Unclaimed Land'
+                            #self.msg = 'Unclaimed Land'
+                            print('Unclaimed Land')
                     elif event.button == 3:
                         #Right Click
-                        self.msg = 'Terrain: ' + str(t.terrain)
+                        #self.msg = 'Terrain: ' + str(t.terrain)
+                        t.updateTileReadout()
+                        print(t.readout)
                     elif event.button == 4:
                         #Scroll up
                         self.earth.changeViewMode(0)

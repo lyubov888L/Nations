@@ -28,7 +28,9 @@ class tile():
                  color = pygame.Color(0, 0, 0),
                  neighbors = {},
                  biome = -1,
-                 owner = None):
+                 owner = None,
+                 jobs = [],
+                 readout = ''):
 
         self.xCoor = xCoor
         self.yCoor = yCoor
@@ -56,6 +58,8 @@ class tile():
         self.neighbors = neighbors
         self.biome = biome
         self.owner = owner
+        self.jobs = jobs
+        self.readout = readout
 
     #def updateAttrib(self, name, val):
     #    try:
@@ -161,3 +165,147 @@ class tile():
                 blue = 255
 
         self.color = pygame.Color(red, green, blue)
+
+    def updateTileReadout(self):
+        self.readout += 'Air Projection: ' + str(self.airProj) + '\n'
+        self.readout += 'Air Strength: ' + str(self.airStr) + '\n'
+        self.readout += 'Biome: ' + str(self.biome) + '\n'
+        self.readout += 'Color: ' + str(self.color) + '\n'
+        self.readout += 'Economy Projecton: ' + str(self.econProj) + '\n'
+        self.readout += 'Economy Strength: ' + str(self.econStr) + '\n'
+        self.readout += 'Energy Projection: ' + str(self.energyProj) + '\n'
+        self.readout += 'Energy Strength: ' + str(self.energyStr) + '\n'
+        self.readout += 'Food: ' + str(self.food) + '\n'
+        self.readout += 'Infrastructure: ' + str(self.infra) + '\n'
+        self.readout += 'Jobs: ' + str(self.jobs) + '\n'
+        self.readout += 'Land Projection: ' + str(self.landProj) + '\n'
+        self.readout += 'Land Strength: ' + str(self.landStr) + '\n'
+        self.readout += 'Nationality: ' + str(self.nationality) + '\n'
+        self.readout += 'Neighbors: ' + str(self.neighbors) + '\n'
+        self.readout += 'Ore: ' + str(self.ore) + '\n'
+        self.readout += 'Owner: ' + str(self.owner) + '\n'
+        self.readout += 'Population: ' + str(self.population) + '\n'
+        self.readout += 'Roughness: ' + str(self.roughness) + '\n'
+        self.readout += 'Terrain: ' + str(self.terrain) + '\n'
+        self.readout += 'Water: ' + str(self.water) + '\n'
+        self.readout += 'Water Projection: ' + str(self.waterProj) + '\n'
+        self.readout += 'Water Strength: ' + str(self.waterStr) + '\n'
+        self.readout += 'Wealth: ' + str(self.wealth) + '\n'
+        self.readout += 'Wood: ' + str(self.wood) + '\n'
+        self.readout += 'X Coordinate: ' + str(self.xCoor) + '\n'
+        self.readout += 'Y Coordinate: ' + str(self.yCoor) + '\n'
+
+    def buildFarm(self):
+        if self.water < 1:
+            return 0
+        else:
+            self.water -= 1
+            self.food += 10
+            return 1
+
+    def buildRoad(self):
+        if self.ore < 1:
+            return 0
+        else:
+            self.ore -= 1
+            self.infra += 1
+            self.roughness = self.roughness / 1.1
+            return 1
+
+    def buidIrrigation(self):
+        if self.wealth < 10:
+            return 0
+        else:
+            self.wealth -= 10
+            self.water += 10
+            return 1
+
+    def buildBarracks(self):
+        if population < 10:
+            return 0
+        else:
+            self.population -= 10
+            self.landStr += 10
+            return 1
+
+    def buildAirbase(self):
+        if population < 10:
+            return 0
+        else:
+            self.population -= 10
+            self.airStr += 10
+            return 1
+
+    def buildNavalbase(self):
+        if population < 10 or self.water < 50 or self.biome != 1:
+            return 0
+        else:
+            self.population -= 10
+            self.waterStr += 10
+            return 1
+
+    def buildMarket(self):
+        if self.wood < 10:
+            return 0
+        else:
+            self.wood -= 10
+            self.econStr += 10
+            return 1
+
+    def buildMine(self):
+        if self.wood < 1:
+            return 0
+        else:
+            self.wood -= 1
+            self.ore += 1.5
+            return 1
+
+    def buildGrove(self):
+        if self.water < 1:
+            return 0
+        else:
+            self.water -= 1
+            self.wood += 1.5
+            return 1
+
+    def buildPowerplant(self):
+        if self.ore < 3 or self.wood < 5 or self.water < 3:
+            return 0
+        else:
+            self.ore -= 3
+            self.wood -= 5
+            self.water -= 3
+            self.energyStr += 15
+            return 1
+
+    def doJob(self, job):
+        if(job == 'buildFarm'):
+            return self.buildAirbase()
+        elif(job == 'buildRoad'):
+            return self.buildRoad()
+        elif(job == 'buildIrrigation'):
+            return self.buildIrrigation()
+        elif(job == 'buildBarracks'):
+            return self.buildBarracks()
+        elif(job == 'buildAirbase'):
+            return self.buildAirbase()
+        elif(job == 'buildNavalbase'):
+            return self.buildNavalbase()
+        elif(job == 'buildMarket'):
+            return self.buildMarket()
+        elif(job == 'buildMine'):
+            return self.buildMine()
+        elif(job == 'buildGrove'):
+            return self.buildGrove()
+        elif(job == 'buildPowerplant'):
+            return self.buildPowerplant()
+        else:
+            return 0
+
+    def doJobs(self):
+        if len(self.jobs) > 0:
+            for job in self.jobs:
+                if self.doJob(job) == 1:
+                    self.jobs.remove(job)
+        else:
+            return 0

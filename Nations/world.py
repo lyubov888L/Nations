@@ -449,7 +449,7 @@ class world():
         for x in range(self.width):
             for y in range(self.height):
                 t = self.tiles[(x,y)]
-                if t.population >= 39:
+                if t.population >= 39 and t.owner == None:
                     n = nation()
                     n.world = self
                     n.name = str((x, y))
@@ -494,7 +494,7 @@ class world():
                             total = posMod + negMod
                             chance = posMod / total
                             if roll < chance:
-                                neighbor.owner.claimTile(tile)
+                                neighbor.owner.claimTile(t)
 
     def updateBorders(self):
         for x in range(0, self.width):
@@ -520,6 +520,7 @@ class world():
         for x in range(0, self.width):
             for y in range(0, self.height):
                 t = self.tiles[(x, y)]
+                t.updateTileReadout()
                 if t.owner == None:
                     pass
                 else:
@@ -544,6 +545,7 @@ class world():
     def updateNations(self):
         for n in self.nations:
             self.checkNation(n)
+            n.queueRoads()
 
     def famine(self, country):
         if country.population < country.food:
