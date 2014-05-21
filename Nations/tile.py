@@ -30,7 +30,10 @@ class tile():
                  biome = -1,
                  owner = None,
                  jobs = [],
-                 readout = ''):
+                 readout = '',
+                 foodStorage = 0,
+                 oreStorage = 0,
+                 woodStorage = 0):
 
         self.xCoor = xCoor
         self.yCoor = yCoor
@@ -60,6 +63,9 @@ class tile():
         self.owner = owner
         self.jobs = jobs
         self.readout = readout
+        self.foodStorage = foodStorage
+        self.oreStorage = oreStorage
+        self.woodStorage = woodStorage
 
     #def updateAttrib(self, name, val):
     #    try:
@@ -176,6 +182,7 @@ class tile():
         self.readout += 'Energy Projection: ' + str(self.energyProj) + '\n'
         self.readout += 'Energy Strength: ' + str(self.energyStr) + '\n'
         self.readout += 'Food: ' + str(self.food) + '\n'
+        self.readout += 'Food Storage: ' + str(self.foodStorage) + '\n'
         self.readout += 'Infrastructure: ' + str(self.infra) + '\n'
         self.readout += 'Jobs: ' + str(self.jobs) + '\n'
         self.readout += 'Land Projection: ' + str(self.landProj) + '\n'
@@ -183,6 +190,7 @@ class tile():
         self.readout += 'Nationality: ' + str(self.nationality) + '\n'
         self.readout += 'Neighbors: ' + str(self.neighbors) + '\n'
         self.readout += 'Ore: ' + str(self.ore) + '\n'
+        self.readout += 'Ore Storage: ' + str(self.oreStorage) + '\n'
         self.readout += 'Owner: ' + str(self.owner) + '\n'
         self.readout += 'Population: ' + str(self.population) + '\n'
         self.readout += 'Roughness: ' + str(self.roughness) + '\n'
@@ -192,6 +200,7 @@ class tile():
         self.readout += 'Water Strength: ' + str(self.waterStr) + '\n'
         self.readout += 'Wealth: ' + str(self.wealth) + '\n'
         self.readout += 'Wood: ' + str(self.wood) + '\n'
+        self.readout += 'Wood Storage: ' + str(self.woodStorage) + '\n'
         self.readout += 'X Coordinate: ' + str(self.xCoor) + '\n'
         self.readout += 'Y Coordinate: ' + str(self.yCoor) + '\n'
 
@@ -204,10 +213,10 @@ class tile():
             return 1
 
     def buildRoad(self):
-        if self.ore < 1:
+        if self.oreStorage < 1:
             return 0
         else:
-            self.ore -= 1
+            self.oreStorage -= 1
             self.infra += 1
             self.roughness = self.roughness / 1.1
             return 1
