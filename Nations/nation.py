@@ -73,11 +73,14 @@ class nation(object):
 
     def queueRoad(self, start, end):
         road = self.chartPath(start, end)
+        if road == 0:
+            return
         for t in road:
             t.jobs.append('buildRoad')
         self.roads.append(road)
 
     def queueRoads(self):
+        maxDistance = 1000
         
         for c in self.cities:
 
@@ -98,8 +101,11 @@ class nation(object):
                         pass
                     else:
                         distance = abs(c.xCoor - ci.xCoor) + abs(c.yCoor - ci.yCoor)
-                        tiebreaker = int(random.random() * 100000000)
-                        Q.put((distance, tiebreaker, ci))
+                        if distance > maxDistance:
+                            pass
+                        else:
+                            tiebreaker = int(random.random() * 100000000)
+                            Q.put((distance, tiebreaker, ci))
 
                 if Q.empty():
                     pass
@@ -117,7 +123,9 @@ class nation(object):
         Q = queue.PriorityQueue()
         visited = []
         t = start
-        while(end[2] not in path):
+        count = 0
+        maxcount = 1000
+        while((end[2] not in path) and (count < maxcount)):
             for neighbor in t.neighbors.values():
                 if neighbor in visited:
                     pass
@@ -126,18 +134,22 @@ class nation(object):
                         path.append(neighbor)
                     elif neighbor.terrain == 4:
                         visited.append(neighbor)
-                    print(end[2])
                     distance = abs(neighbor.xCoor - end[2].xCoor) + abs(neighbor.yCoor - end[2].yCoor) + (neighbor.roughness * 10)
                     tiebreaker = int(random.random() * 100000000)
                     Q.put((distance, tiebreaker, neighbor))
                     visited.append(t)
+            
             path.append(t)            
             t = Q.get()
             if len(t) > 1:
                 t = t[2]
+            count += 1
+        if (count >= maxcount) and (end[2] not in path):
+            return 0
         return path
 
     def updateResources(self):
+
         self.food = 0
         self.wealth = 0
         self.energyStr = 0
@@ -155,7 +167,6 @@ class nation(object):
 
         for t in self.tiles:
             self.food += t.food
-            self.wealth += t.wealth
             self.energyStr += t.energyStr
             self.infra += t.infra
             self.ore += t.ore
@@ -165,19 +176,22 @@ class nation(object):
             self.airStr += t.airStr
             self.waterStr += t.waterStr
             self.econStr += t.econStr
-            t.wealth = (t.food + t.water + 2 * t.wood + 4 * t.ore + t.foodStorage) * t.infra / (t.population + 1)
             self.wealth += t.wealth
-            t.foodStorage += t.food - t.population
             self.foodStorage += t.foodStorage
-            t.oreStorage += t.ore
             self.oreStorage += t.oreStorage
-            t.woodStorage += t.wood
             self.woodStorage += t.woodStorage
-            if t.foodStorage > 0:
-                t.population += int(1 * t.wealth)
+            
 
+    def updatePopulation(self):
+        self.population = 0
+
+        for t in self.tiles:
+            self.population += t.population
 
     def updateReadout(self):
+
+        self.readout = ''
+
         self.readout += 'Name: ' + str(self.name) + '\r\n'
         self.readout += 'Population: ' + str(self.population) + '\r\n'
         self.readout += 'Food: ' + str(self.food) + '\r\n'
@@ -196,8 +210,8 @@ class nation(object):
         self.readout += 'Nationality: ' + str(self.nationality) + '\r\n'
         self.readout += 'Economy Strength: ' + str(self.econStr) + '\r\n'
         self.readout += 'Tiles: ' + str(len(self.tiles)) + '\r\n'
-        self.readout += 'Cities: ' + str(self.cities) + '\r\n'
-        self.readout += 'Roads: ' + str(self.roads) + '\r\n'
+        self.readout += 'Cities: ' + str(len(self.cities)) + '\r\n'
+        self.readout += 'Roads: ' + str(len(self.roads)) + '\r\n'
         self.readout += 'Borders: ' + str(len(self.borders)) + '\r\n'
         self.readout += 'World: ' + str(self.world) + '\r\n'
         self.readout += 'Construction Queue: ' + str(self.consQueue) + '\r\n'

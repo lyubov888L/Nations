@@ -5,6 +5,7 @@ from world import world
 import tile
 from pygame.locals import *
 
+
 if not pygame.font: print('Warning, fonts disabled')
 if not pygame.mixer: print('Warning, sound disabled')
 
@@ -35,6 +36,9 @@ class PyManMain:
 
     def MainLoop(self):
         """This is the main loop of the game"""
+        tiles = self.earth.tiles
+        screen = self.screen
+
         clickX = 0
         clickY = 0
         timer = 0
@@ -44,20 +48,20 @@ class PyManMain:
 
                     
 
-            self.screen.fill(pygame.Color(0,0,0))
+            screen.fill(pygame.Color(0,0,0))
             w = self.width
             h = self.height
 
-            screenArr = pygame.PixelArray(self.screen)
+            screenArr = pygame.PixelArray(screen)
             for x in range(0, w, 1):
                 for y in range(0, h, 1):
-                    screenArr[x][y] = self.earth.tiles[(x, y)].color
+                    screenArr[x][y] = tiles[(x, y)].color
             del screenArr
 
             msgSurfaceObj = self.fontObj.render(self.msg, False, self.red)
             msgRectObj = msgSurfaceObj.get_rect()
             msgRectObj.topleft = (clickX, clickY)
-            self.screen.blit(msgSurfaceObj, msgRectObj)
+            screen.blit(msgSurfaceObj, msgRectObj)
             
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -69,7 +73,7 @@ class PyManMain:
 
                 elif event.type == MOUSEBUTTONUP:
                     clickX, clickY = event.pos
-                    t = self.earth.tiles[(clickX, clickY)]
+                    t = tiles[(clickX, clickY)]
                     if event.button == 1:
                         #Left Click
                         #self.msg = 'Biome: ' + str(t.biome)
@@ -78,6 +82,7 @@ class PyManMain:
                         #Middle Click
                         try:
                             #self.msg = t.owner.readout
+                            t.owner.updateReadout()
                             print(t.owner.readout)
                         except:
                             #self.msg = 'Unclaimed Land'
@@ -106,7 +111,8 @@ class PyManMain:
                     elif event.key == K_a:
                         self.msg = 'a key'
                     elif event.key == K_RETURN:
-                        self.earth.updateWorld()      
+                        self.earth.updateWorld()
+                        self.earth.changeViewMode(1)      
                     elif event.key == K_BACKQUOTE:
                         command = input('\n')
                         while command != 'quit':

@@ -158,17 +158,23 @@ class tile():
                 green = 70
                 blue = 70
 
-            if self.terrain != 4:
-                red += nationColor[0]
-                green += nationColor[1]
-                blue += nationColor[2]
+            if self.terrain != 4 and self.owner != None:
+                red += nationColor[0] - 100
+                green += nationColor[1] - 100
+                blue += nationColor[2] - 100
 
             if red > 255:
                 red = 255
+            if red < 0:
+                red = 0
             if green > 255:
                 green = 255
+            if green < 0:
+                green = 0
             if blue > 255:
                 blue = 255
+            if blue < 0:
+                blue = 0
 
         self.color = pygame.Color(red, green, blue)
 
@@ -203,6 +209,22 @@ class tile():
         self.readout += 'Wood Storage: ' + str(self.woodStorage) + '\n'
         self.readout += 'X Coordinate: ' + str(self.xCoor) + '\n'
         self.readout += 'Y Coordinate: ' + str(self.yCoor) + '\n'
+
+    def updateResources(self):
+        self.wealth = (self.food + self.water + 2 * self.wood + 4 * self.ore + self.foodStorage) * self.infra / (self.population + 1)*1.0
+        self.foodStorage += self.food - self.population
+        if self.foodStorage < 0:
+            self.foodStorage = 0
+
+        self.oreStorage += self.ore
+        self.woodStorage += self.wood
+
+    def updatePopulation(self):
+        if self.population > self.foodStorage:
+            self.population = int(self.foodStorage)
+            self.foodStorage -= self.population
+        else:
+            self.population += int(1 * self.wealth)
 
     def buildFarm(self):
         if self.water < 1:
@@ -312,9 +334,26 @@ class tile():
             return 0
 
     def doJobs(self):
+        remove = self.jobs.remove
+        doJob = self.doJob
+
         if len(self.jobs) > 0:
+            jobs = self.jobs.copy()
+            #print('Doing', str(len(self.jobs)), ' jobs for tile', self.xCoor, self.yCoor)
+    
+            count = 1
             for job in self.jobs:
-                if self.doJob(job) == 1:
-                    self.jobs.remove(job)
+                #print(job, count, 'of', str(len(self.jobs)), 'jobs')
+                count += 1
+                if doJob(job) == 1:
+                    #print(job, 'completed')
+                    jobs.remove(job)
+
+            self.jobs = jobs
+
         else:
+            #print('No jobs to complete')
             return 0
+
+        #print('All jobs completed')
+        return

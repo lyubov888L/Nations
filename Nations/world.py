@@ -2,6 +2,8 @@ from tile import tile
 import pygame
 import random
 from nation import nation
+import cProfile as profile
+import time
 
 class world():
     """This is the world in which the simulation takes place"""
@@ -15,7 +17,8 @@ class world():
                  biomeStrength = .5,
                  fuzzing = 1,
                  viewMode = 0,
-                 unclaimed = []):
+                 unclaimed = [],
+                 year = 0):
 
         self.width = width
         self.height = height
@@ -28,22 +31,24 @@ class world():
         self.fuzzing = fuzzing
         self.viewMode = viewMode
         self.unclaimed = unclaimed
+        self.year = year
         self.createWorld()
-        
 
     def createWorld(self):
         print('Creating tiles')
+        generateTile = self.generateTile
         for x in range(0, self.width + 1):
             for y in range(0, self.height + 1):
-               self.generateTile(x, y)
+               generateTile(x, y)
 
         print('Determining biomes')
         self.determineBiomes()
         print('Determining sub biomes')
-        self.determineSubBiomes() 
+        self.determineSubBiomes()
+        altStagGenerate = self.altStagGenerate 
         for z in range(0, self.fuzzing):
             print('Fuzzing layer:', str(z + 1), 'of', self.fuzzing)
-            self.altStagGenerate()
+            altStagGenerate()
             
         print('Generating Resources')
         self.generateResources()
@@ -55,6 +60,7 @@ class world():
         """Creates a generic tile"""
         t = tile(xCoor = xC, yCoor = yC)
         self.tiles[(xC, yC)] = t
+        t.jobs = []
 
     def generateTileTerrain(self, xC, yC):
         """Determines the terrain type for a tile"""
@@ -256,63 +262,74 @@ class world():
                 pass
 
     def stagGenerate(self):
+        generateTileTerrain = self.generateTileTerrain
+
         for x in range(0, self.width + 1):
             for y in range(0, self.height + 1, 2):
-                self.generateTileTerrain(x, y)
+                generateTileTerrain(x, y)
             for y in range(1, self.height + 1, 2):
-                self.generateTileTerrain(x, y)
+                generateTileTerrain(x, y)
 
     def stagGenerateLine(self, xS, yS, xE, yE):
+        generateTileTerrain = self.generateTileTerrain
+
         if(yS == yE):
             if(xS > xE):
                 for x in range(xS, xE, -2):
-                    self.generateTileTerrain(x, yS)
+                    generateTileTerrain(x, yS)
                 for x in range(xS + 1, xE, -2):
-                    self.generateTileTerrain(x, yS)
+                    generateTileTerrain(x, yS)
 
             else:
                 for x in range(xS, xE, 2):
-                    self.generateTileTerrain(x, yS)
+                    generateTileTerrain(x, yS)
                 for x in range(xS + 1, xE, 2):
-                    self.generateTileTerrain(x, yS)
+                    generateTileTerrain(x, yS)
         
         elif(xS == xE):
             if(yS > yE):
                 for y in range(yS, yE, -2):
-                    self.generateTileTerrain(xS, y)
+                    generateTileTerrain(xS, y)
                 for y in range(yS + 1, yE, -2):
-                    self.generateTileTerrain(xS, y)
+                    generateTileTerrain(xS, y)
 
             else:
                 for y in range(yS, yE, 2):
-                    self.generateTileTerrain(xS, y)
+                    generateTileTerrain(xS, y)
                 for y in range(yS + 1, yE, 2):
-                    self.generateTileTerrain(xS, y)
+                    generateTileTerrain(xS, y)
         else:
             print('Line is diaganol')
 
     def altStagGenerate(self):
+        stagGenerateLine = self.stagGenerateLine
+
         xS = 0
         xE = self.width - 1
         for y in range(0, self.height, 2):
-            self.stagGenerateLine(xS, y, xE, y)
+            stagGenerateLine(xS, y, xE, y)
         for y in range(1, self.height, 2):
-            self.stagGenerateLine(xE, y, xS, y)
+            stagGenerateLine(xE, y, xS, y)
 
     def determineBiomes(self):
+        determineBiome = self.determineBiome
+        spiralGenerateBiome = self.spiralGenerateBiome
 
         for x in range(0, self.width, int(self.biomeSize / 2)):
             for y in range(0, self.height, int(self.biomeSize / 2)):
                 
-                biome = self.determineBiome()
-                self.spiralGenerateBiome((x, y), (self.biomeSize * self.biomeSize), biome)
+                biome = determineBiome()
+                spiralGenerateBiome((x, y), (self.biomeSize * self.biomeSize), biome)
 
 
     def determineSubBiomes(self):
+        determineSubBiome = self.determineSubBiome
+        spiralGenerateBiome = self.spiralGenerateBiome
+
         for t in self.tiles.values():
             if t.biome == 0:
-                biome = self.determineSubBiome(t.biome)
-                self.spiralGenerateBiome((t.xCoor, t.yCoor), self.subBiomeSize * self.subBiomeSize, biome)
+                biome = determineSubBiome(t.biome)
+                spiralGenerateBiome((t.xCoor, t.yCoor), self.subBiomeSize * self.subBiomeSize, biome)
 
     def determineSubBiome(self, biome):
         if biome == 1:
@@ -368,8 +385,10 @@ class world():
         return biome
 
     def generateResources(self):
+        generateTileResources = self.generateTileResources
+
         for t in self.tiles.values():
-            self.generateTileResources(t)
+            generateTileResources(t)
 
     def generateTileResources(self, t):
         if t.terrain == 4:
@@ -511,36 +530,38 @@ class world():
                 elif t in t.owner.borders and border == False:
                     t.owner.borders.remove(t)
 
-    def updateResources(self):
+    def updateTiles(self):
         for t in self.tiles.values():
-            t.updateTileReadout()
-            if t.owner == None:
+            if t.terrain == 4:
                 pass
             else:
-                t.owner.population += t.population
-                t.owner.food += t.food
-                t.owner.wealth += t.wealth
-                t.owner.energyStr += t.energyStr
-                t.owner.infra += t.infra
-                t.owner.ore += t.ore
-                t.owner.water += t.water
-                t.owner.wood += t.wood
-                t.owner.landStr += t.landStr
-                t.owner.airStr += t.airStr
-                t.owner.waterStr += t.waterStr
-                t.owner.econStr += t.econStr
+                t.updateTileReadout()
+                t.updateResources()
+                t.updatePopulation()
 
     def checkNation(self, country):
-        self.famine(country)
+        
+        if country.population < 1:
+            print('Nation', country.name, 'was destroyed by famine')
+            for t in country.tiles:
+                t.owner = None
+                country.tiles.remove(t)
+            self.nations.remove(country)
+
         country.updateReadout()
             
 
     def updateNations(self):
         for n in self.nations:
+            n.updatePopulation()
             n.updateResources()
             self.checkNation(n)
             n.findCities()
             n.queueRoads()
+
+    def updateJobs(self):
+        for t in self.tiles.values():
+            t.doJobs()
 
     def famine(self, country):
         if country.population < country.foodStorage:
@@ -560,11 +581,22 @@ class world():
                     country.tiles.remove(t)
                 self.nations.remove(country)
 
+    
+
     def updateWorld(self):
+        t0 = time.clock()
+        print('')
+        print('Updating year', self.year)
+        self.year += 1
         print('Updating unclaimed land')
         self.updateUnclaimedLand()
         print('Updating borders')
         self.updateBorders()
+        print('Updating tiles')
+        self.updateTiles()
         print('Updating nations')
         self.updateNations()
-        print('Update Complete')
+        print('Updating jobs')
+        self.updateJobs()
+        print('Update complete in ', time.clock() - t0, 'seconds')
+
