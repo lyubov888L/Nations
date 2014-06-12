@@ -552,12 +552,21 @@ class world():
             
 
     def updateNations(self):
+        checkNation = self.checkNation
         for n in self.nations:
             n.updatePopulation()
             n.updateResources()
-            self.checkNation(n)
+            n.buildMilitary()
+            n.research()
+            checkNation(n)
             n.findCities()
-            n.queueRoads()
+
+            try:
+                n.queueRoads()
+            except:
+                n.queueRoads()
+
+            n.buildResources()
 
     def updateJobs(self):
         for t in self.tiles.values():
@@ -581,8 +590,6 @@ class world():
                     country.tiles.remove(t)
                 self.nations.remove(country)
 
-    
-
     def updateWorld(self):
         t0 = time.clock()
         print('')
@@ -600,3 +607,7 @@ class world():
         self.updateJobs()
         print('Update complete in ', time.clock() - t0, 'seconds')
 
+    def updateYears(self, years):
+        updateWorld = self.updateWorld
+        for x in range(0, years):
+            updateWorld()

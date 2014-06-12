@@ -30,7 +30,8 @@ class nation(object):
                  consQueue = [],
                  foodStorage = 0,
                  oreStorage = 0,
-                 woodStorage = 0):
+                 woodStorage = 0,
+                 tech = 1.0):
 
         self.color = color
         self.population = population
@@ -57,6 +58,7 @@ class nation(object):
         self.foodStorage = foodStorage
         self.oreStorage = oreStorage
         self.woodStorage = woodStorage
+        self.tech = tech
     
                 
     def claimTile(self, t):
@@ -70,6 +72,73 @@ class nation(object):
         for t in self.tiles:
             if (t.population > self.population / 30) and (t not in self.cities):
                 self.cities.append(t)
+
+    def findLimitingResource(self):
+        rgen = (self.food, self.water, self.wood, self.ore, self.econStr)
+        minval = min(rgen)
+        ind = rgen.index(minval)
+        if ind == 0:
+            return 'food'
+        elif ind == 1:
+            return 'water'
+        elif ind == 2:
+            return 'wood'
+        elif ind == 3:
+            return 'ore'
+        elif ind == 4:
+            return 'econStr'
+        else:
+            return -1
+    
+    def increaseResourceProduction(self, resource):
+        command = ''
+        if resource == 'food':
+            command = 'buildFarm'
+        elif resource == 'water':
+            command = 'buildIrrigation'
+        elif resource == 'wood':
+            command = 'buildGrove'
+        elif resource == 'ore':
+            command = 'buildMine'
+        elif resource == 'econStr':
+            command = 'buildMarket'
+        else:
+            print(str(resource), 'is not a valid argument')
+            return -1
+        for t in self.tiles:
+            t.jobs.append(command)
+            
+    def buildResources(self):
+        self.increaseResourceProduction(self.findLimitingResource())
+
+    def buildMilitary(self):
+        funding = self.wealth * .025
+        if self.tech > 100:
+            airfund = funding * .22
+            landfund = funding * .3
+            navalfund = funding * .234
+            while (airfund > 100) or (landfund > 50) or (navalfund > 200):
+                for c in self.cities:
+                    if airfund > 100:
+                        c.jobs.append('buildAirBase')
+                        airfund -= 100
+                    if landfund > 50:
+                        c.jobs.append('buildBarracks')
+                        landfund -= 50
+                    if navalfund > 200:
+                        c.jobs.append('buildNavalBase')
+                        navalfund -= 200
+        else:
+            landfund = funding * .6
+            navalfund = funding * .2
+            while (landfund > 50) or (navalfund > 200):
+                for c in self.cities:
+                    if landfund > 50:
+                        c.jobs.append('buildBarracks')
+                        landfund -= 50
+                    if navalfund > 200:
+                        c.jobs.append('buildNavalBase')
+                        navalfund -= 200
 
     def queueRoad(self, start, end):
         road = self.chartPath(start, end)
@@ -104,7 +173,7 @@ class nation(object):
                         if distance > maxDistance:
                             pass
                         else:
-                            tiebreaker = int(random.random() * 100000000)
+                            tiebreaker = random.random() * 100000000
                             Q.put((distance, tiebreaker, ci))
 
                 if Q.empty():
@@ -135,7 +204,7 @@ class nation(object):
                     elif neighbor.terrain == 4:
                         visited.append(neighbor)
                     distance = abs(neighbor.xCoor - end[2].xCoor) + abs(neighbor.yCoor - end[2].yCoor) + (neighbor.roughness * 10)
-                    tiebreaker = int(random.random() * 100000000)
+                    tiebreaker = random.random() * 100000000
                     Q.put((distance, tiebreaker, neighbor))
                     visited.append(t)
             
@@ -175,12 +244,15 @@ class nation(object):
             self.landStr += t.landStr
             self.airStr += t.airStr
             self.waterStr += t.waterStr
-            self.econStr += t.econStr
+            self.econStr += t.econStr * self.tech
             self.wealth += t.wealth
             self.foodStorage += t.foodStorage
             self.oreStorage += t.oreStorage
             self.woodStorage += t.woodStorage
-            
+
+    def research(self):
+        funding = self.wealth * .02
+        self.tech += funding * .01
 
     def updatePopulation(self):
         self.population = 0
@@ -194,6 +266,7 @@ class nation(object):
 
         self.readout += 'Name: ' + str(self.name) + '\r\n'
         self.readout += 'Population: ' + str(self.population) + '\r\n'
+        self.readout += 'Tech: ' + str(self.tech) + '\r\n'
         self.readout += 'Food: ' + str(self.food) + '\r\n'
         self.readout += 'Food Storage: ' + str(self.foodStorage) + '\r\n'
         self.readout += 'Wealth: ' + str(self.wealth) + '\r\n'

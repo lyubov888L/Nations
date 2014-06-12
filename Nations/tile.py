@@ -211,20 +211,21 @@ class tile():
         self.readout += 'Y Coordinate: ' + str(self.yCoor) + '\n'
 
     def updateResources(self):
-        self.wealth = (self.food + self.water + 2 * self.wood + 4 * self.ore + self.foodStorage) * self.infra / (self.population + 1)*1.0
-        self.foodStorage += self.food - self.population
-        if self.foodStorage < 0:
-            self.foodStorage = 0
+        if self.owner != None:
+            self.wealth = (self.food + self.water + 2 * self.wood + 4 * self.ore + self.foodStorage) * (self.infra * self.econStr + .1) / (self.population + 1)*1.0
+            self.foodStorage += (self.food * self.owner.tech) - self.population
+            if self.foodStorage < 0:
+                self.foodStorage = 0
 
-        self.oreStorage += self.ore
-        self.woodStorage += self.wood
+            self.oreStorage += self.ore * self.owner.tech
+            self.woodStorage += self.wood * self.owner.tech
 
     def updatePopulation(self):
         if self.population > self.foodStorage:
             self.population = int(self.foodStorage)
             self.foodStorage -= self.population
         else:
-            self.population += int(1 * self.wealth)
+            self.population += int(self.foodStorage * .1)
 
     def buildFarm(self):
         if self.water < 1:
@@ -243,7 +244,7 @@ class tile():
             self.roughness = self.roughness / 1.1
             return 1
 
-    def buidIrrigation(self):
+    def buildIrrigation(self):
         if self.wealth < 10:
             return 0
         else:
@@ -252,26 +253,35 @@ class tile():
             return 1
 
     def buildBarracks(self):
-        if population < 10:
+        if self.population < 10:
+            return 0
+        elif self.wealth < 50:
             return 0
         else:
             self.population -= 10
+            self.wealth -= 50
             self.landStr += 10
             return 1
 
     def buildAirbase(self):
-        if population < 10:
+        if self.population < 10:
+            return 0
+        elif self.wealth < 100:
             return 0
         else:
             self.population -= 10
+            self.wealth -= 100
             self.airStr += 10
             return 1
 
     def buildNavalbase(self):
-        if population < 10 or self.water < 50 or self.biome != 1:
+        if self.population < 10 or self.water < 50 or self.biome != 1:
+            return 0
+        elif self.wealth < 200:
             return 0
         else:
             self.population -= 10
+            self.wealth -= 200
             self.waterStr += 10
             return 1
 
@@ -311,7 +321,7 @@ class tile():
 
     def doJob(self, job):
         if(job == 'buildFarm'):
-            return self.buildAirbase()
+            return self.buildFarm()
         elif(job == 'buildRoad'):
             return self.buildRoad()
         elif(job == 'buildIrrigation'):

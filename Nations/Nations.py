@@ -103,7 +103,9 @@ class PyManMain:
                     if event.key == K_LEFT:
                         self.msg = 'left arrow key'
                     elif event.key == K_RIGHT:
-                        self.msg = 'right arrow key'
+                        print('Simulating 10 years')
+                        self.earth.updateYears(10)
+                        self.earth.changeViewMode(1)
                     elif event.key == K_UP:
                         self.msg = 'up arrow key'
                     elif event.key == K_DOWN:
