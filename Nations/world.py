@@ -538,6 +538,7 @@ class world():
                 t.updateTileReadout()
                 t.updateResources()
                 t.updatePopulation()
+                t.updateMilitaryProjection()
 
     def checkNation(self, country):
         

@@ -62,10 +62,11 @@ class nation(object):
     
                 
     def claimTile(self, t):
-        if t not in self.tiles:
+        if t not in self.tiles and t.terrain != -1:
             if t.owner != self and t.owner != None:
                 t.owner.tiles.remove(t)
             t.owner = self
+            t.jobs = []
             self.tiles.append(t)
 
     def findCities(self):
@@ -110,6 +111,104 @@ class nation(object):
             
     def buildResources(self):
         self.increaseResourceProduction(self.findLimitingResource())
+
+    def transferResources(self, start, end, resource, amount):
+        if start not in self.cities:
+            print('Startpoint', str(start), 'is not a city')
+            return 0
+        if end not in self.cities:
+            print('Endpoint', str(end), 'is not a city')
+            return 0
+        if amount < 0:
+            print(str(amount), 'is less than 0')
+            return 0
+        if start not in self.roads:
+            print(str(start), 'is not connected to a road')
+            return 0
+        if end not in self.roads:
+            print(str(end), 'is not connected to a road, queuing road')
+            self.queueRoad(start, end)
+            return 0
+        if resource == 'food':
+            if amount > start.food:
+                print('Amount requested greater than amount available:', str(amount), resource)
+                return 0
+            else:
+                start.food -= amount
+                end.food += amount
+                return 1
+        elif resource == 'water':
+            if amount > start.water:
+                print('Amount requested greater than amount available:', str(amount), resource)
+                return 0
+            else:
+                start.water -= amount
+                end.water += amount
+                return 1
+        elif resource == 'ore':
+            if amount > start.ore:
+                print('Amount requested greater than amount available:', str(amount), resource)
+                return 0
+            else:
+                start.ore -= amount
+                end.ore += amount
+                return 1
+        elif resource == 'wealth':
+            if amount > start.wealth:
+                print('Amount requested greater than amount available:', str(amount), resource)
+                return 0
+            else:
+                start.wealth -= amount
+                end.wealth += amount
+                return 1
+        elif resource == 'wood':
+            if amount > start.wood:
+                print('Amount requested greater than amount available:', str(amount), resource)
+                return 0
+            else:
+                start.wood -= amount
+                end.wood += amount
+                return 1
+        elif resource == 'population':
+            if amount > start.population:
+                print('Amount requested greater than amount available:', str(amount), resource)
+                return 0
+            else:
+                start.population -= amount
+                end.population += amount
+                return 1
+        elif resource == 'energyStr':
+            if amount > start.energyStr:
+                print('Amount requested greater than amount available:', str(amount), resource)
+                return 0
+            else:
+                start.energyStr -= amount
+                end.energyStr += amount
+                return 1
+        elif resource == 'airStr':
+            if amount > start.airStr:
+                print('Amount requested greater than amount available:', str(amount), resource)
+                return 0
+            else:
+                start.airStr -= amount
+                end.airStr += amount
+                return 1
+        elif resource == 'waterStr':
+            if amount > start.waterStr:
+                print('Amount requested greater than amount available:', str(amount), resource)
+                return 0
+            else:
+                start.waterStr -= amount
+                end.waterStr += amount
+                return 1
+        elif resource == 'landStr':
+            if amount > start.landStr:
+                print('Amount requested greater than amount available:', str(amount), resource)
+                return 0
+            else:
+                start.landStr -= amount
+                end.landStr += amount
+                return 1
 
     def buildMilitary(self):
         funding = self.wealth * .025
@@ -203,7 +302,37 @@ class nation(object):
                         path.append(neighbor)
                     elif neighbor.terrain == 4:
                         visited.append(neighbor)
-                    distance = abs(neighbor.xCoor - end[2].xCoor) + abs(neighbor.yCoor - end[2].yCoor) + (neighbor.roughness * 10)
+                    distance = ((neighbor.xCoor - end[2].xCoor)**2 + (neighbor.yCoor - end[2].yCoor)**2)**.5 + (neighbor.roughness * 10)
+                    tiebreaker = random.random() * 100000000
+                    Q.put((distance, tiebreaker, neighbor))
+                    visited.append(t)
+            
+            path.append(t)            
+            t = Q.get()
+            if len(t) > 1:
+                t = t[2]
+            count += 1
+        if (count >= maxcount) and (end[2] not in path):
+            return 0
+        return path
+
+    def chartWaterPath(self, start, end):
+        path = []
+        Q = queue.PriorityQueue()
+        visited = []
+        t = start
+        count = 0
+        maxcount = 1000
+        while((end[2] not in path) and (count < maxcount)):
+            for neighbor in t.neighbors.values():
+                if neighbor in visited:
+                    pass
+                else:
+                    if neighbor == end[2]:
+                        path.append(neighbor)
+                    elif neighbor.terrain != 4:
+                        visited.append(neighbor)
+                    distance = ((neighbor.xCoor - end[2].xCoor)**2 + (neighbor.yCoor - end[2].yCoor)**2)**.5 + (neighbor.roughness * 10)
                     tiebreaker = random.random() * 100000000
                     Q.put((distance, tiebreaker, neighbor))
                     visited.append(t)
@@ -259,6 +388,59 @@ class nation(object):
 
         for t in self.tiles:
             self.population += t.population
+
+    def attackCity(self, city, enemyCity):
+        enemy = enemyCity.owner
+        airDist = ((city.xCoor - enemyCity.xCoor)**2 + (city.yCoor - enemyCity.yCoor)**2)**.5
+        navalpath =  self.chartWaterPath((city.xCoor, city.yCoor), (enemyCity.xCoor, enemyCity.yCoor))
+        navalDist = len(navalpath)
+        navalEnd = navalpath[-1]
+        landpath = self.chartPath((city.xCoor, city.yCoor), (enemyCity.xCoor, enemyCity.yCoor))
+        landDist = len(landpath)
+
+        if enemyCity not in landpath:
+            landDist = 999999999
+        if (enemyCity not in navalpath) and (((navalEnd.xCoor - enemyCity.xCoor)**2 + (navalEnd.yCoor - enemyCity.yCoor)**2)**.5 > 50):
+            navalDist = 99999999
+
+        airPhase = 0
+        navalPhase = 0
+        landPhase = 0
+
+        if airDist <= city.airProj:
+            airPhase = enemyCity.airStr - city.airProj
+            navalPhase += airPhase
+        if navalDist <= city.waterProj:
+            navalPhase += enemyCity.waterStr - city.waterProj
+            landPhase += navalPhase
+        if landDist <= city.landProj:
+            landPhase += enemyCity.landStr - city.landProj
+            
+            
+        if landPhase < 0:
+            enemyCity.airStr = airPhase
+            enemyCity.waterStr = navalPhase
+            enemyCity.landStr = landPhase
+
+            if enemyCity.airStr < 0:
+                enemyCity.airStr = 0
+            if enemyCity.waterStr < 0:
+                enemyCity.waterstr = 0
+            if enemyCity.landStr < 0:
+                enemyCity.landStr = 0
+
+            self.claimTile(enemyCity)
+
+            for x in range(city.xCoor, int(city.landProj)):
+                for y in range(city.yCoor, int(city.landProj)):
+                    t = self.world.tiles[(x, y)]
+                    dist = ((city.xCoor - x)**2 + (city.yCoor - y)**2)**.5
+                    if t.owner == enemy and dist <= city.landproj and t not in enemy.cities:
+                        self.claimTile(t)
+
+            return 1
+        else:
+            return 0
 
     def updateReadout(self):
 

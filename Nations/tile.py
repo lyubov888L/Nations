@@ -227,6 +227,12 @@ class tile():
         else:
             self.population += int(self.foodStorage * .1)
 
+    def updateMilitaryProjection(self):
+        if self.owner != None:
+            self.landProj = (self.landStr * self.owner.tech) / 10.0
+            self.airProj = (self.airStr * self.owner.tech) / 3.0
+            self.waterProj = (self.waterStr * self.owner.tech) 
+
     def buildFarm(self):
         if self.water < 1:
             return 0
