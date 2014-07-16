@@ -162,6 +162,10 @@ class tile():
                 red += nationColor[0] - 100
                 green += nationColor[1] - 100
                 blue += nationColor[2] - 100
+                if self in self.owner.borders:
+                    red = 255
+                    green = 0
+                    blue = 0
 
             if red > 255:
                 red = 255

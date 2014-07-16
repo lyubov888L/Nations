@@ -523,7 +523,7 @@ class world():
                 border = False
                 for n in t.neighbors:
                     neighbor = self.tiles[n]
-                    if neighbor.owner == None:
+                    if neighbor.owner == None or neighbor.owner != t.owner:
                         border = True
                         break
                 if border:
