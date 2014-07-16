@@ -467,13 +467,14 @@ class world():
                 g = int(random.random() * 255)
                 b = int(random.random() * 255)
                 n = nation(world = self,
-                           name = str((t.xCoor, t.yCoor)),
+                           name = (t.xCoor, t.yCoor),
                            color = (r, g, b),
                            tiles = [],
                            cities = [],
                            roads = [],
                            borders = [],
-                           consQueue = []
+                           consQueue = [],
+                           enemies = []
                            )
                 n.claimTile(t)
                 self.nations.append(n)
@@ -543,7 +544,7 @@ class world():
     def checkNation(self, country):
         
         if country.population < 1:
-            print('Nation', country.name, 'was destroyed by famine')
+            print('Nation', str(country.name), 'was destroyed by famine')
             for t in country.tiles:
                 t.owner = None
                 country.tiles.remove(t)
@@ -559,6 +560,7 @@ class world():
             n.updateResources()
             n.buildMilitary()
             n.research()
+            n.wageWar()
             checkNation(n)
             n.findCities()
 
@@ -585,7 +587,7 @@ class world():
                     country.population -= 1
                 count += 1
             if country.population == 0:
-                print('Nation', country.name, 'was destroyed by famine')
+                print('Nation', str(country.name), 'was destroyed by famine')
                 for t in country.tiles:
                     t.owner = None
                     country.tiles.remove(t)
