@@ -184,6 +184,8 @@ class tile():
 
     def updateTileReadout(self):
         """Updates the readout of a tile"""
+        self.readout = '\n'
+
         self.readout += 'Air Projection: ' + str(self.airProj) + '\n'
         self.readout += 'Air Strength: ' + str(self.airStr) + '\n'
         self.readout += 'Biome: ' + str(self.biome) + '\n'
@@ -215,6 +217,17 @@ class tile():
         self.readout += 'X Coordinate: ' + str(self.xCoor) + '\n'
         self.readout += 'Y Coordinate: ' + str(self.yCoor) + '\n'
 
+    def findClosestCity(self):
+        closestCity = 0
+        closestDistance = 9999999999
+        for c in self.owner.cities:
+            distance = ((self.xCoor - c.xCoor)**2 + (self.yCoor - c.yCoor)**2)**.5
+            if distance < closestDistance:
+                closestDistance = distance
+                closestCity = c
+
+        return closestCity
+
     def updateResources(self):
         """Updates the amount of resources at a tile"""
         if self.owner != None:
@@ -245,7 +258,7 @@ class tile():
     def buildFarm(self):
         """Builds a farm with water"""
         if self.water < 1:
-            return 0
+            return 'water'
         else:
             self.water -= 1
             self.food += 10
@@ -254,7 +267,7 @@ class tile():
     def buildRoad(self):
         """Builds a road with ore"""
         if self.oreStorage < 1:
-            return 0
+            return 'ore'
         else:
             self.oreStorage -= 1
             self.infra += 1
@@ -264,7 +277,7 @@ class tile():
     def buildIrrigation(self):
         """Increases the amount of water in a tile with wealth"""
         if self.wealth < 10:
-            return 0
+            return 'wealth'
         else:
             self.wealth -= 10
             self.water += 10
@@ -273,9 +286,9 @@ class tile():
     def buildBarracks(self):
         """Increases landStr in the tile with population and wealth"""
         if self.population < 10:
-            return 0
+            return 'population'
         elif self.wealth < 50:
-            return 0
+            return 'wealth'
         else:
             self.population -= 10
             self.wealth -= 50
@@ -285,9 +298,9 @@ class tile():
     def buildAirbase(self):
         """Increases airStr in the tile with population and wealth"""
         if self.population < 10:
-            return 0
+            return 'population'
         elif self.wealth < 100:
-            return 0
+            return 'wealth'
         else:
             self.population -= 10
             self.wealth -= 100
@@ -296,10 +309,14 @@ class tile():
 
     def buildNavalbase(self):
         """Increases waterStr in a tile with population and wealth"""
-        if self.population < 10 or self.water < 50 or self.biome != 1:
+        if self.population < 10:
+            return 'population'
+        elif self.water < 50:
+            return 'water'
+        elif self.biome != 1:
             return 0
         elif self.wealth < 200:
-            return 0
+            return 'wealth'
         else:
             self.population -= 10
             self.wealth -= 200
@@ -309,7 +326,7 @@ class tile():
     def buildMarket(self):
         """Increases the econStr of the tile with wood"""
         if self.wood < 10:
-            return 0
+            return 'wood'
         else:
             self.wood -= 10
             self.econStr += 10
@@ -318,7 +335,7 @@ class tile():
     def buildMine(self):
         """Increases the ore in a tile with wood"""
         if self.wood < 1:
-            return 0
+            return 'wood'
         else:
             self.wood -= 1
             self.ore += 1.5
@@ -327,7 +344,7 @@ class tile():
     def buildGrove(self):
         """Increases the wood in a tile with water"""
         if self.water < 1:
-            return 0
+            return 'water'
         else:
             self.water -= 1
             self.wood += 1.5
@@ -335,8 +352,12 @@ class tile():
 
     def buildPowerplant(self):
         """Increases the energyStr in a tile with ore, water, and wood"""
-        if self.ore < 3 or self.wood < 5 or self.water < 3:
-            return 0
+        if self.ore < 3:
+            return 'ore'
+        elif self.wood < 5:
+            return 'wood'
+        elif self.water < 3:
+            return 'water'
         else:
             self.ore -= 3
             self.wood -= 5
@@ -371,6 +392,9 @@ class tile():
 
     def doJobs(self):
         """Attempts to do all queued jobs in a tile"""
+        if self.owner == None:
+            return 0
+
         remove = self.jobs.remove
         doJob = self.doJob
 
@@ -382,9 +406,13 @@ class tile():
             for job in self.jobs:
                 #print(job, count, 'of', str(len(self.jobs)), 'jobs')
                 count += 1
-                if doJob(job) == 1:
+                report = doJob(job)
+                if report == 1:
                     #print(job, 'completed')
                     jobs.remove(job)
+                else:
+                    self.owner.transferResources(self, self.findClosestCity(), report, 1)
+                    break
 
             self.jobs = jobs
 

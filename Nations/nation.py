@@ -123,41 +123,44 @@ class nation(object):
 
     def transferResources(self, start, end, resource, amount, country = 0):
         """Transports a resource from a start point to an end point via roads"""
-        if start not in self.cities and country == 0:
-            print('Startpoint', str(start), 'is not a city')
+        
+        try:
+            start.xCoor
+        except:
+            print('Start must be a tile')
             return 0
-        elif start not in self.cities and start not in country.cities:
-            print('Startpoint', str(start), 'is not a city')
+
+        try:
+            end.xCoor
+        except:
+            print('End must be a tile')
             return 0
-        if end not in self.cities and country == 0:
-            print('Endpoint', str(end), 'is not a city')
-            return 0
-        elif end not in self.cities and end not in country.cities:
-            print('Endpoint', str(end), 'is not a city')
-            return 0
+
+        distance = ((start.xCoor - end.xCoor)**2 + (start.yCoor - end.yCoor)**2)**.5
+
         if amount < 0:
             print(str(amount), 'is less than 0')
             return 0
-        if start not in self.roads and country == 0:
-            print(str(start), 'is not connected to a road, queuing road')
+        if start not in self.roads and distance > 25 and country == 0:
+            #print(str(start), 'is not connected to a road, queuing road')
             self.queueRoad(start, end)
             return 0
-        elif start not in self.roads and start not in country.roads:
-            print(str(start), 'is not connected to a road, queuing road')
+        elif start not in self.roads and distance > 25 and start not in country.roads:
+            #print(str(start), 'is not connected to a road, queuing road')
             self.queueRoad(start, end)
             country.queueRoad(start, end)
             return 0
-        if end not in self.roads and country == 0:
-            print(str(end), 'is not connected to a road, queuing road')
+        if end not in self.roads and distance > 25 and country == 0:
+            #print(str(end), 'is not connected to a road, queuing road')
             self.queueRoad(start, end)
             return 0
-        elif end not in self.roads and end not in country.roads:
-            print(str(end), 'is not connected to a road, queuing road')
+        elif end not in self.roads and distance > 25 and end not in country.roads:
+            #print(str(end), 'is not connected to a road, queuing road')
             self.queueRoad(start, end)
             country.queueRoad(start, end)
             return 0
         if resource == 'food':
-            if amount > start.food:
+            if amount > start.foodStorage:
                 print('Amount requested greater than amount available:', str(amount), resource)
                 return 0
             else:
@@ -173,7 +176,7 @@ class nation(object):
                 end.water += amount
                 return 1
         elif resource == 'ore':
-            if amount > start.ore:
+            if amount > start.oreStorage:
                 print('Amount requested greater than amount available:', str(amount), resource)
                 return 0
             else:
@@ -189,7 +192,7 @@ class nation(object):
                 end.wealth += amount
                 return 1
         elif resource == 'wood':
-            if amount > start.wood:
+            if amount > start.woodStorage:
                 print('Amount requested greater than amount available:', str(amount), resource)
                 return 0
             else:
@@ -303,7 +306,7 @@ class nation(object):
                             pass
                         else:
                             tiebreaker = random.random() * 100000000
-                            Q.put((distance, tiebreaker, ci))
+                            Q.put((distance, tiebreaker, ci)) #This is where the end location is defined for chartPath
 
                 if Q.empty():
                     pass
@@ -318,6 +321,15 @@ class nation(object):
     
     def chartPath(self, start, end):
         """Charts a path across land and returns a list of tiles"""
+        try:
+            end[2]
+        except:
+            if end == 0:
+                #print('Endpoint must be a tile')
+                return []
+
+            end = (0, random.random() * 1000000, end)
+
         path = []
         Q = queue.PriorityQueue()
         visited = []
@@ -333,6 +345,7 @@ class nation(object):
                         path.append(neighbor)
                     elif neighbor.terrain == 4:
                         visited.append(neighbor)
+                   
                     distance = ((neighbor.xCoor - end[2].xCoor)**2 + (neighbor.yCoor - end[2].yCoor)**2)**.5 + (neighbor.roughness * 10)
                     tiebreaker = random.random() * 100000000
                     Q.put((distance, tiebreaker, neighbor))
@@ -349,6 +362,14 @@ class nation(object):
 
     def chartWaterPath(self, start, end):
         """Charts a path through water and returns a list of tiles"""
+        try:
+            end[2]
+        except:
+            if end == 0:
+                #print('Endpoint must be a tile')
+                return []
+            end = (0, random.random() * 1000000, end)
+
         path = []
         Q = queue.PriorityQueue()
         visited = []
@@ -565,7 +586,7 @@ class nation(object):
     def updateReadout(self):
         """Updates the readout of a nation"""
 
-        self.readout = ''
+        self.readout = '\n'
 
         self.readout += 'Name: ' + str(self.name) + '\r\n'
         self.readout += 'Population: ' + str(self.population) + '\r\n'
