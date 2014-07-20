@@ -33,7 +33,12 @@ class nation(object):
                  oreStorage = 0,
                  woodStorage = 0,
                  tech = 1.0,
-                 strength = 0):
+                 strength = 0,
+                 foodDeficit = 0,
+                 waterDeficit = 0,
+                 oreDeficit = 0,
+                 woodDeficit = 0,
+                 wealthDeficit = 0):
 
         self.color = color
         self.population = population
@@ -63,6 +68,11 @@ class nation(object):
         self.tech = tech
         self.enemies = enemies
         self.strength = strength
+        self.foodDeficit = foodDeficit
+        self.waterDeficit = waterDeficit
+        self.oreDeficit = oreDeficit
+        self.woodDeficit = woodDeficit
+        self.wealthDeficit = wealthDeficit
     
                 
     def claimTile(self, t):
@@ -127,13 +137,13 @@ class nation(object):
         try:
             start.xCoor
         except:
-            print('Start must be a tile')
+            #print('Start must be a tile')
             return 0
 
         try:
             end.xCoor
         except:
-            print('End must be a tile')
+            #print('End must be a tile')
             return 0
 
         distance = ((start.xCoor - end.xCoor)**2 + (start.yCoor - end.yCoor)**2)**.5
@@ -141,35 +151,35 @@ class nation(object):
         if amount < 0:
             print(str(amount), 'is less than 0')
             return 0
-        if start not in self.roads and distance > 25 and country == 0:
+        if start not in self.roads and distance > 20 and country == 0:
             #print(str(start), 'is not connected to a road, queuing road')
             self.queueRoad(start, end)
             return 0
-        elif start not in self.roads and distance > 25 and start not in country.roads:
+        elif start not in self.roads and distance > 20 and start not in country.roads:
             #print(str(start), 'is not connected to a road, queuing road')
             self.queueRoad(start, end)
             country.queueRoad(start, end)
             return 0
-        if end not in self.roads and distance > 25 and country == 0:
+        if end not in self.roads and distance > 20 and country == 0:
             #print(str(end), 'is not connected to a road, queuing road')
             self.queueRoad(start, end)
             return 0
-        elif end not in self.roads and distance > 25 and end not in country.roads:
+        elif end not in self.roads and distance > 20 and end not in country.roads:
             #print(str(end), 'is not connected to a road, queuing road')
             self.queueRoad(start, end)
             country.queueRoad(start, end)
             return 0
         if resource == 'food':
             if amount > start.foodStorage:
-                print('Amount requested greater than amount available:', str(amount), resource)
+                #print('Amount requested greater than amount available:', str(amount), resource)
                 return 0
             else:
-                start.food -= amount
-                end.food += amount
+                start.foodStorage -= amount
+                end.foodStorage += amount
                 return 1
         elif resource == 'water':
             if amount > start.water:
-                print('Amount requested greater than amount available:', str(amount), resource)
+                #print('Amount requested greater than amount available:', str(amount), resource)
                 return 0
             else:
                 start.water -= amount
@@ -177,15 +187,15 @@ class nation(object):
                 return 1
         elif resource == 'ore':
             if amount > start.oreStorage:
-                print('Amount requested greater than amount available:', str(amount), resource)
+                #print('Amount requested greater than amount available:', str(amount), resource)
                 return 0
             else:
-                start.ore -= amount
-                end.ore += amount
+                start.oreStorage -= amount
+                end.oreStorage += amount
                 return 1
         elif resource == 'wealth':
             if amount > start.wealth:
-                print('Amount requested greater than amount available:', str(amount), resource)
+                #print('Amount requested greater than amount available:', str(amount), resource)
                 return 0
             else:
                 start.wealth -= amount
@@ -193,15 +203,15 @@ class nation(object):
                 return 1
         elif resource == 'wood':
             if amount > start.woodStorage:
-                print('Amount requested greater than amount available:', str(amount), resource)
+                #print('Amount requested greater than amount available:', str(amount), resource)
                 return 0
             else:
-                start.wood -= amount
-                end.wood += amount
+                start.woodStorage -= amount
+                end.woodStorage += amount
                 return 1
         elif resource == 'population':
             if amount > start.population:
-                print('Amount requested greater than amount available:', str(amount), resource)
+                #print('Amount requested greater than amount available:', str(amount), resource)
                 return 0
             else:
                 start.population -= amount
@@ -209,7 +219,7 @@ class nation(object):
                 return 1
         elif resource == 'energyStr':
             if amount > start.energyStr:
-                print('Amount requested greater than amount available:', str(amount), resource)
+                #print('Amount requested greater than amount available:', str(amount), resource)
                 return 0
             else:
                 start.energyStr -= amount
@@ -217,7 +227,7 @@ class nation(object):
                 return 1
         elif resource == 'airStr':
             if amount > start.airStr:
-                print('Amount requested greater than amount available:', str(amount), resource)
+                #print('Amount requested greater than amount available:', str(amount), resource)
                 return 0
             else:
                 start.airStr -= amount
@@ -225,7 +235,7 @@ class nation(object):
                 return 1
         elif resource == 'waterStr':
             if amount > start.waterStr:
-                print('Amount requested greater than amount available:', str(amount), resource)
+                #print('Amount requested greater than amount available:', str(amount), resource)
                 return 0
             else:
                 start.waterStr -= amount
@@ -233,7 +243,7 @@ class nation(object):
                 return 1
         elif resource == 'landStr':
             if amount > start.landStr:
-                print('Amount requested greater than amount available:', str(amount), resource)
+                #print('Amount requested greater than amount available:', str(amount), resource)
                 return 0
             else:
                 start.landStr -= amount
@@ -413,9 +423,16 @@ class nation(object):
         self.airStr = 0
         self.waterStr = 0
         self.econStr = 0
+
         self.foodStorage = 0
         self.oreStorage = 0
         self.woodStorage = 0
+
+        self.foodDeficit = 0
+        self.waterDeficit = 0
+        self.woodDeficit = 0
+        self.oreDeficit = 0
+        self.wealthDeficit = 0
 
         for t in self.tiles:
             self.food += t.food
@@ -429,9 +446,51 @@ class nation(object):
             self.waterStr += t.waterStr
             self.econStr += t.econStr * self.tech
             self.wealth += t.wealth
+
             self.foodStorage += t.foodStorage
             self.oreStorage += t.oreStorage
             self.woodStorage += t.woodStorage
+
+            for j in t.jobs:
+                if(j == 'buildFarm'):
+                    self.waterDeficit += 1
+                elif(j == 'buildRoad'):
+                    self.oreDeficit += 1
+                elif(j == 'buildIrrigation'):
+                    self.waterDeficit += 1
+                elif(j == 'buildBarracks'):
+                    self.wealthDeficit += 50
+                elif(j == 'buildAirbase'):
+                    self.wealthDeficit += 100
+                elif(j == 'buildNavalbase'):
+                    self.wealthDeficit += 200
+                    self.waterDeficit += 50
+                elif(j == 'buildMarket'):
+                    self.woodDeficit += 10
+                elif(j == 'buildMine'):
+                    self.woodDeficit += 1
+                elif(j == 'buildGrove'):
+                    self.waterDeficit += 1
+                elif(j == 'buildPowerplant'):
+                    self.oreDeficit += 3
+                    self.waterDeficit += 3
+                    self.woodDeficit += 5
+                else:
+                    pass
+
+            self.waterDeficit -= t.water
+            self.oreDeficit -= t.oreStorage + t.ore
+            self.woodDeficit -= t.woodStorage + t.wood
+            self.wealthDeficit -= t.wealth
+
+        if self.waterDeficit < 0:
+            self.waterDeficit = 0
+        if self.oreDeficit < 0:
+            self.oreDeficit = 0
+        if self.woodDeficit < 0:
+            self.woodDeficit = 0
+        if self.wealthDeficit < 0:
+            self.wealthDeficit = 0
 
         self.strength = self.airStr + self.landStr + self.waterStr
 
@@ -612,3 +671,8 @@ class nation(object):
         self.readout += 'Borders: ' + str(len(self.borders)) + '\r\n'
         self.readout += 'World: ' + str(self.world) + '\r\n'
         self.readout += 'Construction Queue: ' + str(self.consQueue) + '\r\n'
+        self.readout += 'Water Deficit: ' + str(self.waterDeficit) + '\r\n'
+        self.readout += 'Food Deficit: ' + str(self.foodDeficit) + '\r\n'
+        self.readout += 'Wood Deficit: ' + str(self.woodDeficit) + '\r\n'
+        self.readout += 'Ore Deficit: ' + str(self.oreDeficit) + '\r\n'
+
