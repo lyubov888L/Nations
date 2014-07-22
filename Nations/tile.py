@@ -221,10 +221,13 @@ class tile():
         closestCity = 0
         closestDistance = 9999999999
         for c in self.owner.cities:
-            distance = ((self.xCoor - c.xCoor)**2 + (self.yCoor - c.yCoor)**2)**.5
-            if distance < closestDistance:
-                closestDistance = distance
-                closestCity = c
+            if c != self:
+                distance = ((self.xCoor - c.xCoor)**2 + (self.yCoor - c.yCoor)**2)**.5
+                if distance < closestDistance:
+                    closestDistance = distance
+                    closestCity = c
+            else:
+                pass
 
         return closestCity
 

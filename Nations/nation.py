@@ -38,7 +38,9 @@ class nation(object):
                  waterDeficit = 0,
                  oreDeficit = 0,
                  woodDeficit = 0,
-                 wealthDeficit = 0):
+                 wealthDeficit = 0,
+                 offers = [],
+                 pendingOffers = []):
 
         self.color = color
         self.population = population
@@ -73,6 +75,8 @@ class nation(object):
         self.oreDeficit = oreDeficit
         self.woodDeficit = woodDeficit
         self.wealthDeficit = wealthDeficit
+        self.offers = offers
+        self.pendingOffers = pendingOffers
     
                 
     def claimTile(self, t):
@@ -593,6 +597,7 @@ class nation(object):
 
     def gatherIntel(self, country):
         """Estimates military strength of target country as a function of distance"""
+        
         startCity = self.cities[0]
         endCity = country.cities[0]
         p = self.chartPath(startCity, endCity)
@@ -627,7 +632,7 @@ class nation(object):
 
     def calcWarOdds(self, eStrength):
         """Calculates odds of winning a war against target country"""
-        odds = self.strength / (self.strength + eStrength)
+        odds = self.strength / (self.strength + eStrength + .0001)
         return odds
 
     def calcWarCost(self, eStrength):
@@ -641,6 +646,245 @@ class nation(object):
             bCost = eStrength * 2 * 125
 
         return (aCost, bCost)
+
+    def trade(self):
+        """Examines deficits and attempts to trade with other nations, going to war for the resources if necessary"""
+        if self.world.year < 2 or self.cities == []:
+            return
+        else:
+            pass
+        
+        neighbors = []
+        for n in self.world.nations:
+            if n != self and n.cities != [] and self.cities != []:
+                start = self.cities[0]
+                end = n.cities[0]
+                distance = ((start.xCoor - end.xCoor)**2 + (start.yCoor - end.yCoor)**2)**.5
+                neighbors.append((n, distance))
+                
+
+        neighbors = sorted(neighbors, key=lambda e : e[1])
+        closeNations = []
+        for item in neighbors:
+            closeNations.append(item[0])
+
+        neighbors = closeNations
+
+        if self.foodDeficit > 0:
+            for n in neighbors:
+                if n.foodStorage > self.foodDeficit:
+                    self.bargain(n, 'food')
+                    break
+        if self.waterDeficit > 0:
+            for n in neighbors:
+                if n.water > self.waterDeficit:
+                    self.bargain(n, 'water')
+                    break
+        if self.woodDeficit > 0:
+            for n in neighbors:
+                if n.woodStorage > self.woodDeficit:
+                    self.bargain(n, 'wood')
+                    break
+        if self.oreDeficit > 0:
+            for n in neighbors:
+                if n.oreStorage > self.oreDeficit:
+                    self.bargain(n, 'ore')
+                    break
+        if self.wealthDeficit > 0:
+            for n in neighbors:
+                if n.wealth > self.wealth:
+                    self.bargain(n, 'wealth')
+                    break
+
+        self.readOffers()
+
+    def bargain(self, country, resource):
+        """Calculates an acceptable offer for the desired resource"""
+        eStrength = self.gatherIntel(country)
+        odds = self.calcWarOdds(eStrength)
+        costs = self.calcWarCost(eStrength)
+        ourCost = costs[0]
+        theirCost = costs[1]
+        value = 0
+
+        if resource == 'wood':
+            value = country.woodStorage * 2
+        elif resource == 'water':
+            value = country.water
+        elif resource == 'food':
+            value = country.food
+        elif resource == 'ore':
+            value = country.oreStorage * 4
+        elif resource == 'wealth':
+            value = country.wealth
+
+        middleVal = odds * value
+        upperBound = middleVal + theirCost
+        lowerBound = middleVal - ourCost
+
+        offer = upperBound
+
+        self.sendOffer(offer = offer, resource = resource, country = country, status = 0)
+
+
+    def sendOffer(self, offer = 0, resource = 0, country = 0, status = 0, prevOffer = 0):
+        """Sends an offer for the set price for the desired resource to another country"""
+        if country == 0:
+            #print('No recipient for offer')
+            return
+        
+        if prevOffer == 0:
+            message = (offer, resource, self, status)
+            country.offers.append(message)
+            if status == 0:
+                self.pendingOffers.append(message)
+        else:
+            message = []
+            message.append(offer)
+            message.append(prevOffer[1])
+            message.append(prevOffer[2])
+            message.append(status)
+            message.append(self)
+            country.offers.append(message)
+            if status == 0:
+                self.pendingOffers.append(message)
+                country.pendingOffers.remove(prevOffer)
+
+    def readOffers(self):
+        """Reads incoming offers and accepts, modifies, or rejects them"""
+
+        deletedOffers = []
+
+        for o in self.offers:
+            
+            status = o[3]
+            country = o[2]
+            resource = o[1]
+            offer = o[0]
+            sender = 0
+
+
+            if len(o) > 4:
+                sender = o[4]
+
+            if status == 1:
+                #Transfer the resources
+                transferred = 0
+                count = 0
+                while (transferred < offer and count < len(country.tiles)):
+                    currentTile = country.tiles[count]
+                    if resource == 'wood':
+                        transferred += currentTile.woodStorage
+                        if transferred > offer:
+                            diff = transferred - offer
+                            self.cities[0].woodStorage += diff
+                            currentTile.woodStorage -= diff
+                            count += 1
+                        else:
+                            self.cities[0].woodStorage += currentTile.woodStorage
+                            currentTile.woodStorage = 0
+                            count += 1
+                    elif resource == 'water':
+                        transferred += currentTile.water
+                        if transferred > offer:
+                            diff = transferred - offer
+                            self.cities[0].water += diff
+                            currentTile.water -= diff
+                            count += 1
+                        else:
+                            self.cities[0].water += currentTile.water
+                            currentTile.water = 0
+                            count += 1
+                    elif resource == 'food':
+                        transferred += currentTile.foodStorage
+                        if transferred > offer:
+                            diff = transferred - offer
+                            self.cities[0].foodStorage += diff
+                            currentTile.foodStorage -= diff
+                            count += 1
+                        else:
+                            self.cities[0].foodStorage += currentTile.foodStorage
+                            currentTile.foodStorage = 0
+                            count += 1
+                    elif resource == 'ore':
+                        transferred += currentTile.oreStorage
+                        if transferred > offer:
+                            diff = transferred - offer
+                            self.cities[0].oreStorage += diff
+                            currentTile.oreStorage -= diff
+                            count += 1
+                        else:
+                            self.cities[0].oreStorage += currentTile.oreStorage
+                            currentTile.oreStorage = 0
+                            count += 1
+                    elif resource == 'wealth':
+                        transferred += currentTile.wealth
+                        if transferred > offer:
+                            diff = transferred - offer
+                            self.cities[0].wealth += diff
+                            currentTile.wealth -= diff
+                            count += 1
+                        else:
+                            self.cities[0].wealth += currentTile.wealth
+                            currentTile.wealth = 0
+                            count += 1
+
+                deletedOffers.append(o)
+                #country.pendingOffers.remove(o)
+                
+            elif status == 0:
+                #Evaluate the new offer
+                eStrength = self.gatherIntel(country)
+                odds = self.calcWarOdds(eStrength)
+                costs = self.calcWarCost(eStrength)
+                ourCost = costs[0]
+                theirCost = costs[1]
+                value = 0
+
+                if resource == 'wood':
+                    value = self.woodStorage * 2
+                elif resource == 'water':
+                    value = self.water
+                elif resource == 'food':
+                    value = self.foodStorage
+                elif resource == 'ore':
+                    value = self.oreStorage * 4
+                elif resource == 'wealth':
+                    value = self.wealth
+
+                middleVal = odds * value
+                upperBound = middleVal + theirCost
+                lowerBound = middleVal - ourCost
+
+                if offer <= upperBound:
+                    #Accept the offer
+                    #print('Deal accepted between', self.name, 'and', country.name)
+                    status = 1
+                    self.sendOffer(offer = offer, resource = resource, country = country, status = status, prevOffer = o)
+                    deletedOffers.append(o)
+                elif offer < upperBound + upperBound* .1 :
+                    #Attempt to modify the offer
+                    print(self.name, 'thinks that', country.name, 'has not offered a fair deal and is risking war to modify it')
+                    status = 0
+                    offer = upperBound
+                    self.sendOffer(offer = offer, resource = resource, country = country, status = status, prevOffer = o)
+                    deletedOffers.append(o)
+                else:
+                    #Reject the offer
+                    status = -1
+                    self.sendOffer(offer = offer, resource = resource, country = sender, status = status, prevOffer = o)
+                    deletedOffers.append(o)
+                
+            elif status == -1:
+                #Offer was rejected, declare war
+                print('War declared between', self.name, 'and', sender.name)
+                deletedOffers.append(o)
+                self.enemies.append(sender)
+                sender.enemies.append(self)
+                
+
+        for o in deletedOffers:
+            self.offers.remove(o)             
 
     def updateReadout(self):
         """Updates the readout of a nation"""

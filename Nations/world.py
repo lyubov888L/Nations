@@ -54,6 +54,8 @@ class world():
         self.generateResources()
         print('Finding Nations')
         self.findNations()
+        print('Initializing Nations')
+        self.updateYears(3)
         print('World Generation Complete')
 
     def generateTile(self, xC, yC):
@@ -474,25 +476,14 @@ class world():
                            roads = [],
                            borders = [],
                            consQueue = [],
-                           enemies = []
+                           enemies = [],
+                           offers = []
                            )
                 n.claimTile(t)
                 self.nations.append(n)
                 for nb in t.neighbors.values():
                     if nb.owner == None:
                         n.claimTile(nb)
-                #print('Nation found at', str(t.xCoor) + ',', str(t.yCoor), 'with population', str(t.population)) 
-                #for a in range(t.xCoor - 3, t.xCoor + 3):
-                #    if a < 0 or a > self.width:
-                #        pass
-                #    else:
-                #        for b in range(t.yCoor - 3, t.yCoor + 3):
-                #            if b < 0 or b > self.height:
-                #                pass
-                #            else:
-                #                ti = self.tiles[(a, b)]
-                #                if (ti not in n.tiles) and ti.owner == None:
-                #                    n.claimTile(ti)
                                     
     def updateUnclaimedLand(self):
         for t in self.tiles.values():
@@ -543,7 +534,7 @@ class world():
 
     def checkNation(self, country):
         
-        if country.population < 1:
+        if country.population < 1 or country.cities == []:
             print('Nation', str(country.name), 'was destroyed by famine')
             for t in country.tiles:
                 t.owner = None
@@ -556,13 +547,14 @@ class world():
     def updateNations(self):
         checkNation = self.checkNation
         for n in self.nations:
+            n.findCities()
             n.updatePopulation()
             n.updateResources()
             n.buildMilitary()
             n.research()
+            n.trade()
             n.wageWar()
             checkNation(n)
-            n.findCities()
 
             try:
                 n.queueRoads()
