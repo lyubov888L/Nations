@@ -1,6 +1,7 @@
 import random
 import queue
 import math
+from operator import itemgetter, attrgetter
 
 class nation(object):
     """A nation that manages resources and expands"""
@@ -22,7 +23,7 @@ class nation(object):
                  econStr = 0,
                  tiles = [],
                  cities = [],
-                 roads = [],
+                 roads = set(),
                  enemies = [],
                  name = '',
                  borders = [],
@@ -256,42 +257,50 @@ class nation(object):
 
     def buildMilitary(self):
         """Manages the construction of military resources"""
+        world = self.world
         funding = self.wealth * .025
         if self.tech > 100:
             airfund = funding * .22
             landfund = funding * .3
             navalfund = funding * .234
-            while (airfund > 100) or (landfund > 50) or (navalfund > 200):
+            while (airfund > 10 * world.AIR_COST) or (landfund > 10 * world.ARMY_COST) or (navalfund > 10 * world.NAVY_COST):
                 for c in self.cities:
-                    if airfund > 100:
+                    if airfund > 10 * world.AIR_COST:
                         c.jobs.append('buildAirBase')
-                        airfund -= 100
-                    if landfund > 50:
+                        airfund -= 10 * world.AIR_COST
+                    if landfund > 10 * world.ARMY_COST:
                         c.jobs.append('buildBarracks')
-                        landfund -= 50
-                    if navalfund > 200:
+                        landfund -= 10 * world.ARMY_COST
+                    if navalfund > 10 * world.NAVY_COST:
                         c.jobs.append('buildNavalBase')
-                        navalfund -= 200
+                        navalfund -= 10 * world.NAVY_COST
         else:
             landfund = funding * .6
             navalfund = funding * .2
-            while (landfund > 50) or (navalfund > 200):
+            while (landfund > 10 * world.ARMY_COST) or (navalfund > 10 * world.NAVY_COST):
                 for c in self.cities:
-                    if landfund > 50:
+                    if landfund > 10 * world.ARMY_COST:
                         c.jobs.append('buildBarracks')
-                        landfund -= 50
-                    if navalfund > 200:
+                        landfund -= 10 * world.ARMY_COST
+                    if navalfund > 10 * world.NAVY_COST:
                         c.jobs.append('buildNavalBase')
-                        navalfund -= 200
+                        navalfund -= 10 * world.NAVY_COST
 
-    def queueRoad(self, start, end):
+    def queueRoad(self, start, end, path = 0):
         """Queues a road from a start point to an end point"""
-        road = self.chartPath(start, end)
-        if road == 0:
+
+        if path == 0:
+            road = self.searchPath(start, end)
+        else:
+            road = path
+
+        if road == None:
             return
+
         for t in road:
             t.jobs.append('buildRoad')
-        self.roads.append(road)
+
+        self.roads.add(road)
 
     def queueRoads(self):
         """Queues road construction jobs for the nation"""
@@ -299,34 +308,17 @@ class nation(object):
         
         for c in self.cities:
 
-            connected = False
-
-            for r in self.roads:
-                if c in r:
-                    connected = True
-                    
-            if connected:
-                pass
-
-            else:
-                Q = queue.PriorityQueue()
-
-                for ci in self.cities:
-                    if c == ci:
-                        pass
-                    else:
-                        distance = abs(c.xCoor - ci.xCoor) + abs(c.yCoor - ci.yCoor)
-                        if distance > maxDistance:
-                            pass
-                        else:
-                            tiebreaker = random.random() * 100000000
-                            Q.put((distance, tiebreaker, ci)) #This is where the end location is defined for chartPath
-
-                if Q.empty():
-                    pass
-                else:
-                    ci = Q.get()
-                    self.queueRoad(c, ci)  
+            for ci in self.cities:
+                
+                if ci not in c.connectedCities and ci != c:
+                    path = self.searchPath(c, ci)     
+                    current = path[0]
+                    while('road' in current.improvements):
+                        path.remove(current)
+                        current = path[0]
+                    self.queueRoad(current, ci, path)
+                    c.connectedCities.append(ci)
+                    ci.connectedCities.append(c)
 
     def upgradeRoad(self, road):
         """Upgrades an existing road"""
@@ -374,6 +366,66 @@ class nation(object):
             return 0
         return path
 
+    def searchPath(self, start, end):
+
+        def heuristic(start, end):
+            distance = ((start.xCoor - end.xCoor)**2 + (start.yCoor - end.yCoor)**2)**.5
+            return distance
+
+        def tracePath(current):
+             path = []
+             while current.cameFrom:
+                path.append(current)
+                current = current.cameFrom
+                path.append(current)
+                return path[::-1]
+
+        openset = set()
+        closedset = set()
+        current = start
+        openset.add(current)
+
+        fScoreTup = []
+
+        start.gScore = 0
+        start.fScore += heuristic(start, end)
+
+        fScoreTup.append((start, start.fScore))
+
+        while openset:
+            #current = min(openset, key=lambda o:o.fScore)
+            current = min(fScoreTup, key=itemgetter(1))[0]
+            if current == end:
+               return tracePath(current)
+            openset.remove(current)
+            fScoreTup.remove((current, current.fScore))
+            closedset.add(current)
+
+            for neighbor in current.neighbors.values():
+                if neighbor.terrain == 4:
+                    closedset.add(neighbor)
+                if neighbor in closedset:
+                    continue
+                
+                new_g = current.gScore + heuristic(current, neighbor) + neighbor.roughness * 10
+                
+                if neighbor not in openset or new_g < neighbor.gScore:
+                    neighbor.cameFrom = current
+                    neighbor.gScore = new_g
+                    if neighbor in openset:
+                        fScoreTup.remove((neighbor, neighbor.fScore))
+                    neighbor.fScore = neighbor.gScore + heuristic(neighbor, end)
+                    fScoreTup.append((neighbor, neighbor.fScore))
+
+
+                    if neighbor not in openset:
+                        openset.add(neighbor)
+                       
+                    
+               
+        return None
+
+
     def chartWaterPath(self, start, end):
         """Charts a path through water and returns a list of tiles"""
         try:
@@ -415,7 +467,7 @@ class nation(object):
 
     def updateResources(self):
         """Updates the record of resources within a nation"""
-
+        world = self.world
         self.food = 0
         self.wealth = 0
         self.energyStr = 0
@@ -457,24 +509,27 @@ class nation(object):
 
             for j in t.jobs:
                 if(j == 'buildFarm'):
-                    self.waterDeficit += 1
+                    self.waterDeficit += 194250
+                    self.wealthDeficit += 2950 * world.FOOD_VAL
                 elif(j == 'buildRoad'):
-                    self.oreDeficit += 1
+                    self.oreDeficit += 7475
+                    self.wealthDeficit += 4000000
                 elif(j == 'buildIrrigation'):
-                    self.waterDeficit += 1
+                    self.wealthDeficit += 10000 * world.WATER_VAL
                 elif(j == 'buildBarracks'):
-                    self.wealthDeficit += 50
+                    self.wealthDeficit += 10 * world.ARMY_COST
                 elif(j == 'buildAirbase'):
-                    self.wealthDeficit += 100
+                    self.wealthDeficit += 10 * world.AIR_COST
                 elif(j == 'buildNavalbase'):
-                    self.wealthDeficit += 200
-                    self.waterDeficit += 50
+                    self.wealthDeficit += 10 * world.NAVY_COST
                 elif(j == 'buildMarket'):
-                    self.woodDeficit += 10
+                    self.woodDeficit += 100
+                    self.wealthDeficit += 100000
                 elif(j == 'buildMine'):
-                    self.woodDeficit += 1
+                    self.woodDeficit += 100
+                    self.wealthDeficit += 100000000
                 elif(j == 'buildGrove'):
-                    self.waterDeficit += 1
+                    self.waterDeficit += 330932
                 elif(j == 'buildPowerplant'):
                     self.oreDeficit += 3
                     self.waterDeficit += 3
@@ -600,10 +655,10 @@ class nation(object):
         
         startCity = self.cities[0]
         endCity = country.cities[0]
-        p = self.chartPath(startCity, endCity)
+        p = self.searchPath(startCity, endCity)
         distance = 0
         strength = 0
-        if p == 0:
+        if p == None:
             sx = startCity.xCoor
             sy = startCity.yCoor
             ex = endCity.xCoor
@@ -637,13 +692,15 @@ class nation(object):
 
     def calcWarCost(self, eStrength):
         """Calculates the cost of a war between two countries"""
-        aCost = eStrength * 2 * 125
-        bCost = self.strength * 2 * 125
+        world = self.world
+        aCOR = (world.AIR_COST + world.ARMY_COST + world.NAVY_COST / 3.0) #Average cost of replacement
+        aCost = eStrength * 2 * aCOR
+        bCost = self.strength * 2 * aCOR
 
-        if aCost > self.strength * 2 * 125:
-            aCost = self.strength * 2 * 125
-        if bCost > eStrength * 2 * 125:
-            bCost = eStrength * 2 * 125
+        if aCost > self.strength * 2 * aCOR:
+            aCost = self.strength * 2 * aCOR
+        if bCost > eStrength * 2 * aCOR:
+            bCost = eStrength * 2 * aCOR
 
         return (aCost, bCost)
 
@@ -656,43 +713,40 @@ class nation(object):
         
         neighbors = []
         for n in self.world.nations:
-            if n != self and n.cities != [] and self.cities != []:
+            if n != self and n.cities != [] and self.cities != [] and n not in self.enemies:
                 start = self.cities[0]
                 end = n.cities[0]
                 distance = ((start.xCoor - end.xCoor)**2 + (start.yCoor - end.yCoor)**2)**.5
                 neighbors.append((n, distance))
                 
 
-        neighbors = sorted(neighbors, key=lambda e : e[1])
-        closeNations = []
-        for item in neighbors:
-            closeNations.append(item[0])
-
+        neighbors = sorted(neighbors, key=itemgetter(1))
+        closeNations = [x[0] for x in neighbors]
         neighbors = closeNations
 
         if self.foodDeficit > 0:
             for n in neighbors:
-                if n.foodStorage > self.foodDeficit:
+                if n.foodStorage >= self.foodDeficit:
                     self.bargain(n, 'food')
                     break
         if self.waterDeficit > 0:
             for n in neighbors:
-                if n.water > self.waterDeficit:
+                if n.water >= self.waterDeficit:
                     self.bargain(n, 'water')
                     break
         if self.woodDeficit > 0:
             for n in neighbors:
-                if n.woodStorage > self.woodDeficit:
+                if n.woodStorage >= self.woodDeficit:
                     self.bargain(n, 'wood')
                     break
         if self.oreDeficit > 0:
             for n in neighbors:
-                if n.oreStorage > self.oreDeficit:
+                if n.oreStorage >= self.oreDeficit:
                     self.bargain(n, 'ore')
                     break
         if self.wealthDeficit > 0:
             for n in neighbors:
-                if n.wealth > self.wealth:
+                if n.wealth >= self.wealth:
                     self.bargain(n, 'wealth')
                     break
 
@@ -700,6 +754,7 @@ class nation(object):
 
     def bargain(self, country, resource):
         """Calculates an acceptable offer for the desired resource"""
+        world = self.world
         eStrength = self.gatherIntel(country)
         odds = self.calcWarOdds(eStrength)
         costs = self.calcWarCost(eStrength)
@@ -708,13 +763,13 @@ class nation(object):
         value = 0
 
         if resource == 'wood':
-            value = country.woodStorage * 2
+            value = country.woodStorage * world.WOOD_VAL
         elif resource == 'water':
-            value = country.water
+            value = country.water * world.WATER_VAL
         elif resource == 'food':
-            value = country.food
+            value = country.food * world.FOOD_VAL
         elif resource == 'ore':
-            value = country.oreStorage * 4
+            value = country.oreStorage * world.ORE_VAL
         elif resource == 'wealth':
             value = country.wealth
 
@@ -752,7 +807,7 @@ class nation(object):
 
     def readOffers(self):
         """Reads incoming offers and accepts, modifies, or rejects them"""
-
+        world = self.world
         deletedOffers = []
 
         for o in self.offers:
@@ -770,6 +825,14 @@ class nation(object):
             if status == 1:
                 #Transfer the resources
                 transferred = 0
+                if resource == 'wood':
+                    offer = offer / world.WOOD_VAL
+                elif resource == 'ore':
+                    offer = offer / world.ORE_VAL
+                elif resource == 'water':
+                    offer = offer / world.WATER_VAL
+                elif resource == 'food':
+                    offer = offer / world.FOOD_VAL
                 count = 0
                 while (transferred < offer and count < len(country.tiles)):
                     currentTile = country.tiles[count]
@@ -842,13 +905,13 @@ class nation(object):
                 value = 0
 
                 if resource == 'wood':
-                    value = self.woodStorage * 2
+                    value = self.woodStorage * world.WOOD_VAL
                 elif resource == 'water':
-                    value = self.water
+                    value = self.water * world.WATER_VAL
                 elif resource == 'food':
-                    value = self.foodStorage
+                    value = self.foodStorage * world.FOOD_VAL
                 elif resource == 'ore':
-                    value = self.oreStorage * 4
+                    value = self.oreStorage * world.ORE_VAL
                 elif resource == 'wealth':
                     value = self.wealth
 

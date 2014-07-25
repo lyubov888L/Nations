@@ -18,7 +18,16 @@ class world():
                  fuzzing = 1,
                  viewMode = 0,
                  unclaimed = [],
-                 year = 0):
+                 year = 0,
+                 WATER_VAL = 2,
+                 WOOD_VAL = 200,
+                 FOOD_VAL = 10,
+                 ORE_VAL = 130,
+                 ARMY_COST = 1000,
+                 NAVY_COST = 100000,
+                 AIR_COST = 10000,
+                 TECH_FACTOR = .001,
+                 ECON_FACTOR = .001):
 
         self.width = width
         self.height = height
@@ -32,6 +41,15 @@ class world():
         self.viewMode = viewMode
         self.unclaimed = unclaimed
         self.year = year
+        self.WATER_VAL = WATER_VAL
+        self.WOOD_VAL = WOOD_VAL
+        self.FOOD_VAL = FOOD_VAL
+        self.ORE_VAL = ORE_VAL
+        self.TECH_FACTOR = TECH_FACTOR
+        self.ECON_FACTOR = ECON_FACTOR
+        self.ARMY_COST = ARMY_COST
+        self.NAVY_COST = NAVY_COST
+        self.AIR_COST = AIR_COST
         self.createWorld()
 
     def createWorld(self):
@@ -55,7 +73,7 @@ class world():
         print('Finding Nations')
         self.findNations()
         print('Initializing Nations')
-        self.updateYears(3)
+        self.updateYears(2)
         print('World Generation Complete')
 
     def generateTile(self, xC, yC):
@@ -63,6 +81,8 @@ class world():
         t = tile(xCoor = xC, yCoor = yC)
         self.tiles[(xC, yC)] = t
         t.jobs = []
+        t.connectedCities = []
+        t.improvements = []
 
     def generateTileTerrain(self, xC, yC):
         """Determines the terrain type for a tile"""
@@ -404,28 +424,28 @@ class world():
             roll = 2*random.random()
             t.population = int(20 * roll)
             roll = 2*random.random()
-            t.food = 10 * roll
+            t.food = 1000 * roll
             roll = 2*random.random()
-            t.ore = 1 * roll
+            t.ore = 100 * roll
             roll = 2*random.random()
-            t.water = 10 * roll
+            t.water = 1000 * roll
             roll = 2*random.random()
-            t.wood = 5 * roll
+            t.wood = 50 * roll
             roll = 2*random.random()
             t.roughness = 5 * roll
 
         elif t.terrain == 1:
             #Desert Effect
             roll = 2*random.random()
-            t.population = int(.5 * roll)
+            t.population = int(10 * roll)
             roll = 2*random.random()
             t.food = int(.5 * roll)
             roll = 2*random.random()
-            t.ore = 15 * roll
+            t.ore = 150 * roll
             roll = 2*random.random()
-            t.water = int(.5 * roll)
+            t.water = 10 * roll
             roll = 2*random.random()
-            t.wood = 0
+            t.wood = 10 * roll
             t.roughness = 30 * roll
 
         elif t.terrain == 2:
@@ -433,13 +453,13 @@ class world():
             roll = 2*random.random()
             t.population = int(5 * roll)
             roll = 2*random.random()
-            t.food = 5 * roll
+            t.food = 750 * roll
             roll = 2*random.random()
-            t.ore = 5 * roll
+            t.ore = 50 * roll
             roll = 2*random.random()
-            t.water = 15 * roll
+            t.water = 1500 * roll
             roll = 2*random.random()
-            t.wood = 40 * roll
+            t.wood = 1800 * roll
             roll = 2*random.random()
             t.roughness = 40 * roll
 
@@ -448,13 +468,13 @@ class world():
             roll = 2*random.random()
             t.population = int(3 * roll)
             roll = 2*random.random()
-            t.food = 3 * roll
+            t.food = 300 * roll
             roll = 2*random.random()
-            t.ore = 30 * roll
+            t.ore = 3000 * roll
             roll = 2*random.random()
-            t.water = 5 * roll
+            t.water = 500 * roll
             roll = 2*random.random()
-            t.wood = 5 * roll
+            t.wood = 600 * roll
             roll = 2*random.random()
             t.roughness = 50 * roll
 
@@ -550,18 +570,13 @@ class world():
             n.findCities()
             n.updatePopulation()
             n.updateResources()
+            n.buildResources()
+            #n.queueRoads()
             n.buildMilitary()
             n.research()
             n.trade()
-            n.wageWar()
+            #n.wageWar()
             checkNation(n)
-
-            try:
-                n.queueRoads()
-            except:
-                n.queueRoads()
-
-            n.buildResources()
 
     def updateJobs(self):
         for t in self.tiles.values():

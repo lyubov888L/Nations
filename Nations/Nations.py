@@ -1,10 +1,10 @@
 import os
 import sys
 import pygame
+import pstats
 from world import world
 import tile
 from pygame.locals import *
-
 
 if not pygame.font: print('Warning, fonts disabled')
 if not pygame.mixer: print('Warning, sound disabled')
@@ -12,7 +12,7 @@ if not pygame.mixer: print('Warning, sound disabled')
 class PyManMain:
     """The main PyMan class - this class handles the main initialization and creating of the game"""
 
-    def __init__(self, width=800, height=400):
+    def __init__(self, width=200, height=100):
         #Initialize the game
         pygame.init()
         self.fpsClock = pygame.time.Clock()
