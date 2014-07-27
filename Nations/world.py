@@ -1,6 +1,7 @@
 from tile import tile
 import pygame
 import random
+import math
 from nation import nation
 import cProfile as profile
 import time
@@ -53,20 +54,34 @@ class world():
         self.createWorld()
 
     def createWorld(self):
+        print('Generating Heightmap')
+        heightmap = self.generateHeightmap(.5)
         print('Creating tiles')
         generateTile = self.generateTile
+        generateTileTerrain = self.generateTileTerrain
+
+        waterlevel = 0
+
         for x in range(0, self.width + 1):
             for y in range(0, self.height + 1):
-               generateTile(x, y)
+                height = heightmap[x][y]
+                generateTile(x, y, height)
+                waterlevel += height
 
-        print('Determining biomes')
-        self.determineBiomes()
-        print('Determining sub biomes')
-        self.determineSubBiomes()
-        altStagGenerate = self.altStagGenerate 
-        for z in range(0, self.fuzzing):
-            print('Fuzzing layer:', str(z + 1), 'of', self.fuzzing)
-            altStagGenerate()
+        waterlevel = waterlevel / (self.width * self.height)
+        for x in range(0, self.width + 1):
+            for y in range(0, self.height + 1):
+                generateTileTerrain(x, y, waterlevel)
+        
+
+        #print('Determining biomes')
+        #self.determineBiomes()
+        #print('Determining sub biomes')
+        #self.determineSubBiomes()
+        #altStagGenerate = self.altStagGenerate 
+        #for z in range(0, self.fuzzing):
+        #    print('Fuzzing layer:', str(z + 1), 'of', self.fuzzing)
+        #    altStagGenerate()
             
         print('Generating Resources')
         self.generateResources()
@@ -76,25 +91,40 @@ class world():
         self.updateYears(2)
         print('World Generation Complete')
 
-    def generateTile(self, xC, yC):
+    def generateTile(self, xC, yC, height):
         """Creates a generic tile"""
         t = tile(xCoor = xC, yCoor = yC)
         self.tiles[(xC, yC)] = t
         t.jobs = []
         t.connectedCities = []
         t.improvements = []
+        t.height = height
 
-    def generateTileTerrain(self, xC, yC):
+    def generateTileTerrain(self, xC, yC, waterlevel):
         """Determines the terrain type for a tile"""
+
+        if waterlevel < 0:
+            waterlevel = .01
+
         t = self.tiles[(xC, yC)]
-        type = random.random()
-        if(xC == 0 or yC == 0 or xC == self.width or yC == self.height):
-            t.terrain = 4
-            t.calcTileColor()
+        if t.height < waterlevel:
+            t.biome = 1
+            t.terrain = 4 # Water
+        elif t.height < waterlevel + .1 * waterlevel:
+            t.biome = 3
+            t.terrain = 1 # Desert
+        elif t.height < waterlevel + .15 * waterlevel:
+            t.biome = 2
+            t.terrain = 0 # Grasslands
+        elif t.height < waterlevel + .3 * waterlevel:
+            t.biome = 4
+            t.terrain = 2 # Forests
         else:
-            t.neighbors = self.findNeighbors(xC, yC)
-            t.terrain = self.determineTerrain(t)
-            t.calcTileColor()
+            t.biome = 5
+            t.terrain = 3 # Mountains
+        t.calcTileColor()
+        t.neighbors = self.findNeighbors(xC, yC)
+        
 
     def findNeighbors(self, xC, yC):
         """Finds the neighbors of a tile"""
@@ -343,6 +373,113 @@ class world():
                 biome = determineBiome()
                 spiralGenerateBiome((x, y), (self.biomeSize * self.biomeSize), biome)
 
+    def generateHeightmap(self, h):
+        """Creates a square heightmap for use in generating terrain.  Uses diamond square algorithm"""
+
+        def square(grid, h, center, size, iteration):
+            size = int(size / 2)
+            #print(size)
+            #print(center)
+            #print(iteration)
+            top = grid[center[0]][center[1] - size]
+            bottom = grid[center[0]][center[1] + size]
+            left = grid[center[0] - size][center[1]]
+            right = grid[center[0] + size][center[1]]
+
+            tl = grid[center[0] - size][center[1] - size]
+            tr = grid[center[0] + size][center[1] - size]
+            bl = grid[center[0] - size][center[1] + size]
+            br = grid[center[0] + size][center[1] + size]
+            ce = grid[center[0]][center[1]]
+
+            grid[int(center[0] - size / 2)][int(center[1] - size / 2)] = (tl + top + left + ce) / 4 + h * (random.random() * 2 - 1) / iteration #Top left of the square
+            grid[int(center[0] + size / 2)][int(center[1] - size / 2)] = (tr + top + right + ce) / 4 + h * (random.random() * 2 - 1) / iteration #Top right of the square
+            grid[int(center[0] - size / 2)][int(center[1] + size / 2)] = (bl + bottom + left + ce) / 4 + h * (random.random() * 2 - 1) / iteration #Bottom left of the sqaure
+            grid[int(center[0] + size / 2)][int(center[1] + size / 2)] = (br + bottom + right + ce) / 4 + h * (random.random() * 2 - 1) / iteration #Bottom right of the square
+
+            newCenters = []
+            newCenters.append((int(center[0] - size / 2), int(center[1] - size / 2)))
+            newCenters.append((int(center[0] + size / 2), int(center[1] - size / 2)))
+            newCenters.append((int(center[0] - size / 2), int(center[1] + size / 2)))
+            newCenters.append((int(center[0] + size / 2), int(center[1] + size / 2)))
+
+            return newCenters
+
+        def diamond(grid, h, center, size, iteration):
+            size = int(size / 2)
+            #print(size)
+            #print(center)
+            #print(iteration)
+            top = (center[0], center[1] - size)
+            bottom = (center[0], center[1] + size)
+            left = (center[0] - size, center[1])
+            right = (center[0] + size, center[1])
+            
+
+            tl = grid[center[0] - size][center[1] - size]
+            tr = grid[center[0] + size][center[1] - size]
+            bl = grid[center[0] - size][center[1] + size]
+            br = grid[center[0] + size][center[1] + size]
+            ce = grid[center[0]][center[1]]
+
+            #print((center[0] - size, center[1] - size), tl)
+            #print((center[0] + size, center[1] - size), tr)
+            #print((center[0] - size, center[1] + size), bl)
+            #print((center[0] + size, center[1] + size), br)
+            #print((center[0], center[1]), ce)
+
+            if grid[top[0]][top[1]] == None:
+                grid[top[0]][top[1]] = (tl + tr + ce) / 3 + h * (random.random() * 2 - 1) / iteration
+            if grid[bottom[0]][bottom[1]] == None:
+                grid[bottom[0]][bottom[1]] = (bl + br + ce) / 3 + h * (random.random() * 2 - 1) / iteration
+            if grid[left[0]][left[1]] == None:
+                grid[left[0]][left[1]] = (tl + bl + ce) / 3 + h * (random.random() * 2 - 1) / iteration
+            if grid[right[0]][right[1]] == None:
+                grid[right[0]][right[1]] = (tr + br + ce) / 3 + h * (random.random() * 2 - 1) / iteration
+
+        def recursiveSquare(grid, h, center, size, iteration):
+            if size < 1:
+                return
+            diamond(grid, h, center, size, iteration)
+            centers = square(grid, h, center, size, iteration)
+            size = int(size / 2)
+            iteration += 1
+            for c in centers:
+                recursiveSquare(grid, h, c, size, iteration)
+
+        rectsize = 0
+
+        if self.width > self.height:
+            rectsize = self.width
+        else:
+            rectsize = self.height
+
+        rectsize = int(pow(2, math.ceil(math.log(rectsize, 2)))) # find the next highest power of two
+
+        if rectsize % 2 != 1:
+            rectsize += 1
+
+
+        grid = [[None for x in range(0, rectsize)] for x in range(0, rectsize)]
+        rectsize -= 1
+
+        tl = 1
+        tr = 1
+        bl = 1
+        br = 1
+
+        grid[0][0] = tl
+        grid[0][rectsize] = tr
+        grid[rectsize][0] = bl
+        grid[rectsize][rectsize] = br
+
+        grid[int(rectsize/2)][int(rectsize/2)] = (tl + tr + bl + br) / 4 + h * random.random() * 2
+        iteration = 1
+
+        #rectsize = int(rectsize / 2)
+        recursiveSquare(grid, h, (int(rectsize / 2), int(rectsize / 2)), rectsize, iteration)
+        
+        return grid
 
     def determineSubBiomes(self):
         determineSubBiome = self.determineSubBiome
@@ -493,7 +630,7 @@ class world():
                            color = (r, g, b),
                            tiles = [],
                            cities = [],
-                           roads = [],
+                           roads = set(),
                            borders = [],
                            consQueue = [],
                            enemies = [],
@@ -562,7 +699,6 @@ class world():
             self.nations.remove(country)
 
         country.updateReadout()
-            
 
     def updateNations(self):
         checkNation = self.checkNation
@@ -575,7 +711,7 @@ class world():
             n.buildMilitary()
             n.research()
             n.trade()
-            #n.wageWar()
+            n.wageWar()
             checkNation(n)
 
     def updateJobs(self):

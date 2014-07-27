@@ -39,7 +39,8 @@ class tile():
                  fScore = 0,
                  cameFrom = None,
                  connectedCities = [],
-                 improvements = []):
+                 improvements = [],
+                 height = 0):
 
         self.xCoor = xCoor
         self.yCoor = yCoor
@@ -78,6 +79,7 @@ class tile():
         self.cameFrom = cameFrom # Used in A* pathfinding
         self.connectedCities = connectedCities
         self.improvements = improvements
+        self.height = height
 
     def calcTileColor(self, mode=0):
         """Updates the color of the tile"""
@@ -200,6 +202,7 @@ class tile():
         self.readout += 'Energy Strength: ' + str(self.energyStr) + '\n'
         self.readout += 'Food: ' + str(self.food) + '\n'
         self.readout += 'Food Storage: ' + str(self.foodStorage) + '\n'
+        self.readout += 'Height: ' + str(self.height) + '\n'
         self.readout += 'Infrastructure: ' + str(self.infra) + '\n'
         self.readout += 'Jobs: ' + str(self.jobs) + '\n'
         self.readout += 'Land Projection: ' + str(self.landProj) + '\n'

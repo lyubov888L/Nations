@@ -12,7 +12,7 @@ if not pygame.mixer: print('Warning, sound disabled')
 class PyManMain:
     """The main PyMan class - this class handles the main initialization and creating of the game"""
 
-    def __init__(self, width=200, height=100):
+    def __init__(self, width=400, height=200):
         #Initialize the game
         pygame.init()
         self.fpsClock = pygame.time.Clock()
@@ -54,14 +54,7 @@ class PyManMain:
             h = self.height
 
             screenArr = pygame.PixelArray(screen)
-            """sx = 0
-            for x in range(int(camPos[0]), w, 1):
-                sy = 0
-                for y in range(int(camPos[1]), h, 1):
-                    screenArr[sx][sy] = tiles[(int(x / scale), int(y / scale))].color
-                    sy += 1
-                sx += 1
-                """
+            
             if scale == 1:
                 camPos = [0, 0]
 

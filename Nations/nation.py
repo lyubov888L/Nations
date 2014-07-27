@@ -290,7 +290,7 @@ class nation(object):
         """Queues a road from a start point to an end point"""
 
         if path == 0:
-            road = self.searchPath(start, end)
+            road = self.searchPath(start, end, False)
         else:
             road = path
 
@@ -299,8 +299,7 @@ class nation(object):
 
         for t in road:
             t.jobs.append('buildRoad')
-
-        self.roads.add(road)
+            self.roads.add(t)
 
     def queueRoads(self):
         """Queues road construction jobs for the nation"""
@@ -311,7 +310,7 @@ class nation(object):
             for ci in self.cities:
                 
                 if ci not in c.connectedCities and ci != c:
-                    path = self.searchPath(c, ci)     
+                    path = self.searchPath(c, ci, False)     
                     current = path[0]
                     while('road' in current.improvements):
                         path.remove(current)
@@ -366,7 +365,7 @@ class nation(object):
             return 0
         return path
 
-    def searchPath(self, start, end):
+    def searchPath(self, start, end, water):
 
         def heuristic(start, end):
             distance = ((start.xCoor - end.xCoor)**2 + (start.yCoor - end.yCoor)**2)**.5
@@ -402,7 +401,7 @@ class nation(object):
             closedset.add(current)
 
             for neighbor in current.neighbors.values():
-                if neighbor.terrain == 4:
+                if neighbor.terrain == 4 and not water:
                     closedset.add(neighbor)
                 if neighbor in closedset:
                     continue
@@ -568,16 +567,32 @@ class nation(object):
     def attackCity(self, city, enemyCity):
         """Commences a battle from one city to another"""
         enemy = enemyCity.owner
-        airDist = ((city.xCoor - enemyCity.xCoor)**2 + (city.yCoor - enemyCity.yCoor)**2)**.5
-        navalpath =  self.chartWaterPath((city.xCoor, city.yCoor), (enemyCity.xCoor, enemyCity.yCoor))
-        navalDist = len(navalpath)
-        navalEnd = navalpath[-1]
-        landpath = self.chartPath((city.xCoor, city.yCoor), (enemyCity.xCoor, enemyCity.yCoor))
-        landDist = len(landpath)
+        print('Commencing battle')
+        airDist = 0
+        navalDist = 0
+        landDist = 0
+        navalpath = []
+        landpath = []
+        navalEnd = 0
+        if city.airStr > 0:
+            airDist = ((city.xCoor - enemyCity.xCoor)**2 + (city.yCoor - enemyCity.yCoor)**2)**.5
+        else:
+            airDist = 99999999999
+        if city.waterStr > 0:
+            navalpath =  self.searchPath(city, enemyCity, True)
+            navalDist = len(navalpath)
+            navalEnd = navalpath[-1]
+        else:
+            navalDist = 999999999
+        if city.landStr > 0:
+            landpath = self.searchPath(city, enemyCity, False)
+            landDist = len(landpath)
+        else:
+            landDist = 99999999
 
         if enemyCity not in landpath:
             landDist = 999999999
-        if (enemyCity not in navalpath) and (((navalEnd.xCoor - enemyCity.xCoor)**2 + (navalEnd.yCoor - enemyCity.yCoor)**2)**.5 > 50):
+        if enemyCity not in navalpath:
             navalDist = 99999999
 
         airPhase = 0
@@ -585,7 +600,8 @@ class nation(object):
         landPhase = 0
 
         if airDist <= city.airProj:
-            chance = city.airStr / city.airStr + enemyCity.airStr
+            print('Beginning air phase')
+            chance = city.airStr / (city.airStr + enemyCity.airStr + .001)
             while (city.airStr > 0 and enemyCity.airStr > 0):
                 battle = random.random()
                 if battle <= chance:
@@ -594,10 +610,12 @@ class nation(object):
                     city.airStr -= 1
 
             airPhase = enemyCity.airStr - city.airStr
+            print('Air phase complete.  Result:', airPhase)
 
             navalPhase += airPhase
         if navalDist <= city.waterProj:
-            chance = city.waterStr / city.waterStr + enemyCity.waterStr
+            print('Beginning naval phase')
+            chance = city.waterStr / (city.waterStr + enemyCity.waterStr + .001)
             while (city.waterStr > 0 and enemyCity.waterStr > 0):
                 battle = random.random()
                 if battle <= chance:
@@ -606,9 +624,11 @@ class nation(object):
                     city.waterStr -= 1
 
             navalPhase += enemyCity.waterStr - city.waterStr
+            print('Naval phase complete.  Result:', navalPhase)
             landPhase += navalPhase
         if landDist <= city.landProj:
-            chance = city.landStr / city.landStr + enemyCity.landstr
+            print('Beginning land phase')
+            chance = city.landStr / (city.landStr + enemyCity.landStr + .001)
             while (city.landStr > 0 and enemyCity.landStr > 0):
                 battle = random.random()
                 if battle <= chance:
@@ -617,10 +637,11 @@ class nation(object):
                     city.landStr -= 1
 
             landPhase += enemyCity.landStr - city.landStr
+            print('Land phase complete.  Result:', landPhase)
             
             
         if landPhase < 0:
-
+            print(self.name, 'wins battle!  Claiming land for', self.name)
             if enemyCity.airStr < 0:
                 enemyCity.airStr = 0
             if enemyCity.waterStr < 0:
@@ -631,13 +652,9 @@ class nation(object):
             self.claimTile(enemyCity)
             self.cities.append(enemyCity)
 
-            for x in range(enemyCity.xCoor - int(enemyCity.landProj), enemyCity.xCoor + int(enemyCity.landProj)):
-                for y in range(enemyCity.yCoor - int(enemyCity.landProj), enemyCity.yCoor + int(enemyCity.landProj)):
-                    t = self.world.tiles[(x, y)]
-                    dist = ((city.xCoor - x)**2 + (city.yCoor - y)**2)**.5
-                    edist = ((enemyCity.xCoor - x)**2 + (enemyCity.yCoor - y)**2)**.5
-                    if t.owner == enemy and dist <= city.landproj and (t not in enemy.cities) and edist <= enemyCity.landProj:
-                        self.claimTile(t)
+            for t in enemyCity.owner.tiles:
+                if t.closestCity == enemyCity:
+                    self.claimTile(t)
 
             return 1
         else:
@@ -648,14 +665,16 @@ class nation(object):
         for e in self.enemies:
             for c in self.cities:
                 for ec in e.cities:
-                    self.attackCity(c, ec)
+                    if c.airStr + c.waterStr + c.landStr > 0:
+                        print(self.name, 'is launching attack against the city', '(' + str(ec.xCoor) + ', ' + str(ec.yCoor) + ')')
+                        self.attackCity(c, ec)
 
     def gatherIntel(self, country):
         """Estimates military strength of target country as a function of distance"""
         
         startCity = self.cities[0]
         endCity = country.cities[0]
-        p = self.searchPath(startCity, endCity)
+        p = self.searchPath(startCity, endCity, False)
         distance = 0
         strength = 0
         if p == None:
