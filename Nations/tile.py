@@ -34,13 +34,15 @@ class tile():
                  foodStorage = 0,
                  oreStorage = 0,
                  woodStorage = 0,
-                 closestCity = 0,
+                 closestCity = None,
+                 closestRoad = None,
                  gScore = 0,
                  fScore = 0,
                  cameFrom = None,
                  connectedCities = [],
                  improvements = [],
-                 height = 0):
+                 height = 0,
+                 world = None):
 
         self.xCoor = xCoor
         self.yCoor = yCoor
@@ -74,12 +76,14 @@ class tile():
         self.oreStorage = oreStorage
         self.woodStorage = woodStorage
         self.closestCity = closestCity
+        self.closestRoad = closestRoad
         self.gScore = gScore # Used in A* pathfinding
         self.fScore = fScore # Used in A* pathfinding
         self.cameFrom = cameFrom # Used in A* pathfinding
         self.connectedCities = connectedCities
         self.improvements = improvements
         self.height = height
+        self.world = world
 
     def calcTileColor(self, mode=0):
         """Updates the color of the tile"""
@@ -104,9 +108,14 @@ class tile():
                     green = 110
                 #Mountain
                 elif(self.terrain == 3):
-                    red = 149
-                    green = 112
-                    blue = 40
+                    if self.height > self.world.waterlevel * 1.35:
+                        red = 255
+                        green = 255
+                        blue = 255
+                    else:
+                        red = 149
+                        green = 112
+                        blue = 40
                 #Water
                 elif(self.terrain == 4):
                     blue = 200
@@ -148,9 +157,14 @@ class tile():
                 green = 110
             #Mountain
             elif(self.terrain == 3):
-                red = 149
-                green = 112
-                blue = 40
+                if self.height > self.world.waterlevel * 1.35:
+                    red = 255
+                    green = 255
+                    blue = 255
+                else:
+                    red = 149
+                    green = 112
+                    blue = 40
             #Water
             elif(self.terrain == 4):
                 blue = 200
@@ -225,7 +239,7 @@ class tile():
         self.readout += 'Y Coordinate: ' + str(self.yCoor) + '\n'
 
     def findClosestCity(self):
-        closestCity = self
+        closestCity = None
         closestDistance = 9999999999
         for c in self.owner.cities:
             if c != self:
@@ -234,9 +248,23 @@ class tile():
                     closestDistance = distance
                     closestCity = c
             else:
-                pass
+                continue
 
         return closestCity
+
+    def findClosestRoad(self):
+        closestRoad = self.closestCity
+        closestDistance = 9999999
+        for t in self.owner.tiles:
+            if t != self and 'road' in t.improvements:
+                distance = ((self.xCoor - t.xCoor)**2 + (self.yCoor - t.yCoor)**2)**.5
+                if distance < closestDistance:
+                    closestDistance - distance
+                    closestRoad = t
+            else:
+                continue
+
+        return closestRoad
 
     def updateResources(self):
         """Updates the amount of resources at a tile and sends them to the closest city"""
@@ -247,17 +275,26 @@ class tile():
         if self.owner != None:
             world = self.owner.world
             self.closestCity = self.findClosestCity()
+            self.closestRoad = self.findClosestRoad()
             
             closestCity = self.closestCity
-            closestCity.wealth = (self.foodStorage * world.FOOD_VAL + self.water * world.WATER_VAL + self.woodStorage * world.WOOD_VAL + self.oreStorage * world.ORE_VAL) * (1 + self.econStr * world.ECON_FACTOR) / (self.population + 1)*1.0
-            closestCity.wealth -= self.airStr * world.AIR_COST + self.landStr * world.ARMY_COST + self.waterStr * world.NAVY_COST
-            closestCity.foodStorage += (self.food * (1 + self.owner.tech * world.TECH_FACTOR)) - self.population
+            if closestCity != None:
+                closestCity.wealth = (self.foodStorage * world.FOOD_VAL + self.water * world.WATER_VAL + self.woodStorage * world.WOOD_VAL + self.oreStorage * world.ORE_VAL) * (1 + self.econStr * world.ECON_FACTOR) / (self.population + 1)*1.0
+                closestCity.wealth -= self.airStr * world.AIR_COST + self.landStr * world.ARMY_COST + self.waterStr * world.NAVY_COST
+                closestCity.foodStorage += .5 * (self.food * (1 + self.owner.tech * world.TECH_FACTOR))
+                closestCity.oreStorage += self.ore * (1 + self.owner.tech * world.TECH_FACTOR)
+                closestCity.woodStorage += self.wood * (1 + self.owner.tech * world.TECH_FACTOR)
+                self.foodStorage += .5 * (self.food * (1 + self.owner.tech * world.TECH_FACTOR))
+            else:
+                self.wealth = (self.foodStorage * world.FOOD_VAL + self.water * world.WATER_VAL + self.woodStorage * world.WOOD_VAL + self.oreStorage * world.ORE_VAL) * (1 + self.econStr * world.ECON_FACTOR) / (self.population + 1)*1.0
+                self.foodStorage += self.food * (1 + self.owner.tech * world.TECH_FACTOR)
+                self.oreStorage += self.ore * (1 + self.owner.tech * world.TECH_FACTOR)
+                self.woodStorage += self.wood * (1 + self.owner.tech * world.TECH_FACTOR)
             
             if self.foodStorage < 0:
                 self.foodStorage = 0
 
-            closestCity.oreStorage += self.ore * (1 + self.owner.tech * world.TECH_FACTOR)
-            closestCity.woodStorage += self.wood * (1 + self.owner.tech * world.TECH_FACTOR)
+            
 
     def updatePopulation(self):
         """Updates the population level of the tile"""
@@ -450,9 +487,9 @@ class tile():
 
         remove = self.jobs.remove
         doJob = self.doJob
+        completed = []
 
         if len(self.jobs) > 0:
-            jobs = self.jobs.copy()
             #print('Doing', str(len(self.jobs)), ' jobs for tile', self.xCoor, self.yCoor)
     
             count = 1
@@ -462,16 +499,19 @@ class tile():
                 report = doJob(job)
                 if report == 1:
                     #print(job, 'completed')
-                    jobs.remove(job)
+                    completed.append(job)
                 else:
-                    self.owner.transferResources(self, self.closestCity, report, 1000)
-                    break
-
-            self.jobs = jobs
+                    if self.closestCity != None:
+                        self.owner.transferResources(self.closestCity, self, report, 1000)
+                    continue
 
         else:
             #print('No jobs to complete')
             return 0
+
+        for job in completed:
+            self.jobs.remove(job)
+            self.owner.consQueue.remove(job)
 
         #print('All jobs completed')
         return

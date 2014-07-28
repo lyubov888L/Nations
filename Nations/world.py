@@ -28,7 +28,8 @@ class world():
                  NAVY_COST = 100000,
                  AIR_COST = 10000,
                  TECH_FACTOR = .001,
-                 ECON_FACTOR = .001):
+                 ECON_FACTOR = .001,
+                 waterlevel = 0):
 
         self.width = width
         self.height = height
@@ -51,6 +52,7 @@ class world():
         self.ARMY_COST = ARMY_COST
         self.NAVY_COST = NAVY_COST
         self.AIR_COST = AIR_COST
+        self.waterlevel = waterlevel
         self.createWorld()
 
     def createWorld(self):
@@ -60,28 +62,17 @@ class world():
         generateTile = self.generateTile
         generateTileTerrain = self.generateTileTerrain
 
-        waterlevel = 0
-
         for x in range(0, self.width + 1):
             for y in range(0, self.height + 1):
                 height = heightmap[x][y]
                 generateTile(x, y, height)
-                waterlevel += height
+                self.waterlevel += height
 
-        waterlevel = waterlevel / (self.width * self.height)
+        self.waterlevel = self.waterlevel / (self.width * self.height)
         for x in range(0, self.width + 1):
             for y in range(0, self.height + 1):
-                generateTileTerrain(x, y, waterlevel)
+                generateTileTerrain(x, y, self.waterlevel)
         
-
-        #print('Determining biomes')
-        #self.determineBiomes()
-        #print('Determining sub biomes')
-        #self.determineSubBiomes()
-        #altStagGenerate = self.altStagGenerate 
-        #for z in range(0, self.fuzzing):
-        #    print('Fuzzing layer:', str(z + 1), 'of', self.fuzzing)
-        #    altStagGenerate()
             
         print('Generating Resources')
         self.generateResources()
@@ -99,6 +90,7 @@ class world():
         t.connectedCities = []
         t.improvements = []
         t.height = height
+        t.world = self
 
     def generateTileTerrain(self, xC, yC, waterlevel):
         """Determines the terrain type for a tile"""
@@ -110,21 +102,20 @@ class world():
         if t.height < waterlevel:
             t.biome = 1
             t.terrain = 4 # Water
-        elif t.height < waterlevel + .1 * waterlevel:
+        elif t.height < waterlevel + .07 * waterlevel:
             t.biome = 3
             t.terrain = 1 # Desert
         elif t.height < waterlevel + .15 * waterlevel:
             t.biome = 2
             t.terrain = 0 # Grasslands
-        elif t.height < waterlevel + .3 * waterlevel:
+        elif t.height < waterlevel + .25 * waterlevel:
             t.biome = 4
             t.terrain = 2 # Forests
         else:
             t.biome = 5
             t.terrain = 3 # Mountains
         t.calcTileColor()
-        t.neighbors = self.findNeighbors(xC, yC)
-        
+        t.neighbors = self.findNeighbors(xC, yC)   
 
     def findNeighbors(self, xC, yC):
         """Finds the neighbors of a tile"""
@@ -282,97 +273,6 @@ class world():
 
         return terrain
 
-    def spiralGenerateBiome(self, origin = (-1, -1), length = -1, biome = -2):
-        #print('Generating biome at', str(origin))
-        vX = 1
-        vY = 0
-        sL = 1
-
-        pX = origin[0]
-        pY = origin[1]
-        sP = 0
-
-        for k in range(0, length + 1):
-
-            try:
-                t = self.tiles[(pX, pY)]
-                t.biome = biome
-                pX += vX
-                pY += vY
-                sP += 1
-                
-                if (sP == sL):
-                    sP = 0
-
-                    buffer = vX
-                    vX = -vY
-                    vY = buffer
-
-                    if (vY == 0):
-                        sL += 1
-            except:
-                pass
-
-    def stagGenerate(self):
-        generateTileTerrain = self.generateTileTerrain
-
-        for x in range(0, self.width + 1):
-            for y in range(0, self.height + 1, 2):
-                generateTileTerrain(x, y)
-            for y in range(1, self.height + 1, 2):
-                generateTileTerrain(x, y)
-
-    def stagGenerateLine(self, xS, yS, xE, yE):
-        generateTileTerrain = self.generateTileTerrain
-
-        if(yS == yE):
-            if(xS > xE):
-                for x in range(xS, xE, -2):
-                    generateTileTerrain(x, yS)
-                for x in range(xS + 1, xE, -2):
-                    generateTileTerrain(x, yS)
-
-            else:
-                for x in range(xS, xE, 2):
-                    generateTileTerrain(x, yS)
-                for x in range(xS + 1, xE, 2):
-                    generateTileTerrain(x, yS)
-        
-        elif(xS == xE):
-            if(yS > yE):
-                for y in range(yS, yE, -2):
-                    generateTileTerrain(xS, y)
-                for y in range(yS + 1, yE, -2):
-                    generateTileTerrain(xS, y)
-
-            else:
-                for y in range(yS, yE, 2):
-                    generateTileTerrain(xS, y)
-                for y in range(yS + 1, yE, 2):
-                    generateTileTerrain(xS, y)
-        else:
-            print('Line is diaganol')
-
-    def altStagGenerate(self):
-        stagGenerateLine = self.stagGenerateLine
-
-        xS = 0
-        xE = self.width - 1
-        for y in range(0, self.height, 2):
-            stagGenerateLine(xS, y, xE, y)
-        for y in range(1, self.height, 2):
-            stagGenerateLine(xE, y, xS, y)
-
-    def determineBiomes(self):
-        determineBiome = self.determineBiome
-        spiralGenerateBiome = self.spiralGenerateBiome
-
-        for x in range(0, self.width, int(self.biomeSize / 2)):
-            for y in range(0, self.height, int(self.biomeSize / 2)):
-                
-                biome = determineBiome()
-                spiralGenerateBiome((x, y), (self.biomeSize * self.biomeSize), biome)
-
     def generateHeightmap(self, h):
         """Creates a square heightmap for use in generating terrain.  Uses diamond square algorithm"""
 
@@ -480,68 +380,6 @@ class world():
         recursiveSquare(grid, h, (int(rectsize / 2), int(rectsize / 2)), rectsize, iteration)
         
         return grid
-
-    def determineSubBiomes(self):
-        determineSubBiome = self.determineSubBiome
-        spiralGenerateBiome = self.spiralGenerateBiome
-
-        for t in self.tiles.values():
-            if t.biome == 0:
-                biome = determineSubBiome(t.biome)
-                spiralGenerateBiome((t.xCoor, t.yCoor), self.subBiomeSize * self.subBiomeSize, biome)
-
-    def determineSubBiome(self, biome):
-        if biome == 1:
-            return 1
-        else:
-            biome = random.random()
-
-            grass = 3.0
-            desert = 3.3
-            forest = 2.0
-            mountain = 2.4
-            water = .01
-
-            total = grass + desert + forest + mountain + water
-            grassP = grass / total
-            desertP = desert / total + grassP
-            forestP = forest / total + desertP
-            mountainP = mountain / total + forestP
-            waterP = water / total + mountainP
-
-            if(biome < grassP):
-                biome = 2
-            elif(biome < desertP and biome >= grassP):
-                biome = 3
-            elif(biome < forestP and biome >= desertP):
-                biome = 4
-            elif(biome < mountainP and biome >= forestP):
-                biome = 5
-            elif(biome < waterP and biome >= mountainP):
-                biome = 6
-            else:
-                biome = 6
-
-            return biome
-
-    def determineBiome(self):
-
-        biome = random.random()
-
-        land = 3
-        water = 7
-        
-        total = land + water
-        
-        landP = land / total
-        waterP = water / total
-
-        if(biome < landP):
-            biome = 0
-        else:
-            biome = 1
-
-        return biome
 
     def generateResources(self):
         generateTileResources = self.generateTileResources
@@ -654,7 +492,7 @@ class world():
                         pass
                     else:
                         roll = random.random()
-                        posMod = n.infra + n.population
+                        posMod = n.infra + n.population + n.owner.tech * self.TECH_FACTOR
                         negMod = n.roughness + 1
                         total = posMod + negMod
                         chance = posMod / total

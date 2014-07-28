@@ -41,7 +41,8 @@ class nation(object):
                  woodDeficit = 0,
                  wealthDeficit = 0,
                  offers = [],
-                 pendingOffers = []):
+                 pendingOffers = [],
+                 neighbors = dict()):
 
         self.color = color
         self.population = population
@@ -78,22 +79,37 @@ class nation(object):
         self.wealthDeficit = wealthDeficit
         self.offers = offers
         self.pendingOffers = pendingOffers
+        self.neighbors = neighbors
     
                 
     def claimTile(self, t):
         """Claims a tile for the nation"""
         if t not in self.tiles and t.terrain != -1:
             if t.owner != self and t.owner != None:
+                if t in t.owner.cities:
+                    t.owner.cities.remove(t)
                 t.owner.tiles.remove(t)
             t.owner = self
             t.jobs = []
             self.tiles.append(t)
 
     def findCities(self):
-        """Scans tiles in nation and finds the 30 most populous cities"""
+        """Scans tiles in nation and finds the most populous cities"""
+        maxCities = int(len(self.tiles) / 700)
+        if maxCities < 1:
+            maxCities = 1
         for t in self.tiles:
-            if (t.population > self.population / 30) and (t not in self.cities):
-                self.cities.append(t)
+            if (t.population > self.population / 30) and (t not in self.cities) and len(self.cities) < maxCities:
+                if self.cities == []:               
+                    self.cities.append(t)
+                    self.roads.add(t)
+                    t.improvements.append('road')
+                else:
+                    distance = ((t.closestCity.xCoor - t.xCoor)**2 + (t.closestCity.yCoor - t.yCoor)**2)**.5
+                    if distance > 25:
+                        self.cities.append(t)
+                        self.roads.add(t)
+                        t.improvements.append('road')
 
     def findLimitingResource(self):
         """Finds the lowest producing resource"""
@@ -129,8 +145,10 @@ class nation(object):
         else:
             print(str(resource), 'is not a valid argument')
             return -1
-        for t in self.tiles:
-            t.jobs.append(command)
+        for t in self.cities:
+            if command not in t.jobs:
+                t.jobs.append(command)
+                self.consQueue.append(command)
             
     def buildResources(self):
         """Builds necessary resources for the nation"""
@@ -138,6 +156,9 @@ class nation(object):
 
     def transferResources(self, start, end, resource, amount, country = 0):
         """Transports a resource from a start point to an end point via roads"""
+        if start == end:
+            #cannot transfer resources to itself.
+            return 0
         
         try:
             start.xCoor
@@ -151,14 +172,17 @@ class nation(object):
             #print('End must be a tile')
             return 0
 
-        distance = ((start.xCoor - end.xCoor)**2 + (start.yCoor - end.yCoor)**2)**.5
+        distance = ((end.xCoor - end.closestRoad.xCoor)**2 + (end.yCoor - end.closestRoad.yCoor)**2)**.5
 
         if amount < 0:
             print(str(amount), 'is less than 0')
             return 0
-        if start not in self.roads and distance > 20 and country == 0:
+        if start not in self.roads and distance > 20 and country == 0 and end not in self.roads:
             #print(str(start), 'is not connected to a road, queuing road')
             self.queueRoad(start, end)
+            return 0
+        elif start not in self.roads and distance > 20 and country == 0:
+            self.queueRoad(start, start.closestRoad)
             return 0
         elif start not in self.roads and distance > 20 and start not in country.roads:
             #print(str(start), 'is not connected to a road, queuing road')
@@ -167,7 +191,7 @@ class nation(object):
             return 0
         if end not in self.roads and distance > 20 and country == 0:
             #print(str(end), 'is not connected to a road, queuing road')
-            self.queueRoad(start, end)
+            self.queueRoad(end, end.closestRoad)
             return 0
         elif end not in self.roads and distance > 20 and end not in country.roads:
             #print(str(end), 'is not connected to a road, queuing road')
@@ -267,12 +291,15 @@ class nation(object):
                 for c in self.cities:
                     if airfund > 10 * world.AIR_COST:
                         c.jobs.append('buildAirBase')
+                        self.consQueue.append('buildAirBase')
                         airfund -= 10 * world.AIR_COST
                     if landfund > 10 * world.ARMY_COST:
                         c.jobs.append('buildBarracks')
+                        self.consQueue.append('buildBarracks')
                         landfund -= 10 * world.ARMY_COST
                     if navalfund > 10 * world.NAVY_COST:
                         c.jobs.append('buildNavalBase')
+                        self.consQueue.append('buildNavalBase')
                         navalfund -= 10 * world.NAVY_COST
         else:
             landfund = funding * .6
@@ -281,9 +308,11 @@ class nation(object):
                 for c in self.cities:
                     if landfund > 10 * world.ARMY_COST:
                         c.jobs.append('buildBarracks')
+                        self.consQueue.append('buildBarracks')
                         landfund -= 10 * world.ARMY_COST
                     if navalfund > 10 * world.NAVY_COST:
                         c.jobs.append('buildNavalBase')
+                        self.consQueue.append('buildNavalBase')
                         navalfund -= 10 * world.NAVY_COST
 
     def queueRoad(self, start, end, path = 0):
@@ -299,6 +328,7 @@ class nation(object):
 
         for t in road:
             t.jobs.append('buildRoad')
+            self.consQueue.append('buildRoad')
             self.roads.add(t)
 
     def queueRoads(self):
@@ -323,47 +353,7 @@ class nation(object):
         """Upgrades an existing road"""
         for t in road:
             t.jobs.append('buildRoad')
-    
-    def chartPath(self, start, end):
-        """Charts a path across land and returns a list of tiles"""
-        try:
-            end[2]
-        except:
-            if end == 0:
-                #print('Endpoint must be a tile')
-                return []
-
-            end = (0, random.random() * 1000000, end)
-
-        path = []
-        Q = queue.PriorityQueue()
-        visited = []
-        t = start
-        count = 0
-        maxcount = 1000
-        while((end[2] not in path) and (count < maxcount)):
-            for neighbor in t.neighbors.values():
-                if neighbor in visited:
-                    pass
-                else:
-                    if neighbor == end[2]:
-                        path.append(neighbor)
-                    elif neighbor.terrain == 4:
-                        visited.append(neighbor)
-                   
-                    distance = ((neighbor.xCoor - end[2].xCoor)**2 + (neighbor.yCoor - end[2].yCoor)**2)**.5 + (neighbor.roughness * 10)
-                    tiebreaker = random.random() * 100000000
-                    Q.put((distance, tiebreaker, neighbor))
-                    visited.append(t)
-            
-            path.append(t)            
-            t = Q.get()
-            if len(t) > 1:
-                t = t[2]
-            count += 1
-        if (count >= maxcount) and (end[2] not in path):
-            return 0
-        return path
+            self.consQueue.append('buildRoad')
 
     def searchPath(self, start, end, water):
 
@@ -424,46 +414,6 @@ class nation(object):
                
         return None
 
-
-    def chartWaterPath(self, start, end):
-        """Charts a path through water and returns a list of tiles"""
-        try:
-            end[2]
-        except:
-            if end == 0:
-                #print('Endpoint must be a tile')
-                return []
-            end = (0, random.random() * 1000000, end)
-
-        path = []
-        Q = queue.PriorityQueue()
-        visited = []
-        t = start
-        count = 0
-        maxcount = 1000
-        while((end[2] not in path) and (count < maxcount)):
-            for neighbor in t.neighbors.values():
-                if neighbor in visited:
-                    pass
-                else:
-                    if neighbor == end[2]:
-                        path.append(neighbor)
-                    elif neighbor.terrain != 4:
-                        visited.append(neighbor)
-                    distance = ((neighbor.xCoor - end[2].xCoor)**2 + (neighbor.yCoor - end[2].yCoor)**2)**.5 + (neighbor.roughness * 10)
-                    tiebreaker = random.random() * 100000000
-                    Q.put((distance, tiebreaker, neighbor))
-                    visited.append(t)
-            
-            path.append(t)            
-            t = Q.get()
-            if len(t) > 1:
-                t = t[2]
-            count += 1
-        if (count >= maxcount) and (end[2] not in path):
-            return 0
-        return path
-
     def updateResources(self):
         """Updates the record of resources within a nation"""
         world = self.world
@@ -506,40 +456,41 @@ class nation(object):
             self.oreStorage += t.oreStorage
             self.woodStorage += t.woodStorage
 
-            for j in t.jobs:
-                if(j == 'buildFarm'):
-                    self.waterDeficit += 194250
-                    self.wealthDeficit += 2950 * world.FOOD_VAL
-                elif(j == 'buildRoad'):
-                    self.oreDeficit += 7475
-                    self.wealthDeficit += 4000000
-                elif(j == 'buildIrrigation'):
-                    self.wealthDeficit += 10000 * world.WATER_VAL
-                elif(j == 'buildBarracks'):
-                    self.wealthDeficit += 10 * world.ARMY_COST
-                elif(j == 'buildAirbase'):
-                    self.wealthDeficit += 10 * world.AIR_COST
-                elif(j == 'buildNavalbase'):
-                    self.wealthDeficit += 10 * world.NAVY_COST
-                elif(j == 'buildMarket'):
-                    self.woodDeficit += 100
-                    self.wealthDeficit += 100000
-                elif(j == 'buildMine'):
-                    self.woodDeficit += 100
-                    self.wealthDeficit += 100000000
-                elif(j == 'buildGrove'):
-                    self.waterDeficit += 330932
-                elif(j == 'buildPowerplant'):
-                    self.oreDeficit += 3
-                    self.waterDeficit += 3
-                    self.woodDeficit += 5
-                else:
-                    pass
+        for j in self.consQueue:
 
-            self.waterDeficit -= t.water
-            self.oreDeficit -= t.oreStorage + t.ore
-            self.woodDeficit -= t.woodStorage + t.wood
-            self.wealthDeficit -= t.wealth
+            if(j == 'buildFarm'):
+                self.waterDeficit += 194250
+                self.wealthDeficit += 2950 * world.FOOD_VAL
+            elif(j == 'buildRoad'):
+                self.oreDeficit += 7475
+                self.wealthDeficit += 4000000
+            elif(j == 'buildIrrigation'):
+                self.wealthDeficit += 10000 * world.WATER_VAL
+            elif(j == 'buildBarracks'):
+                self.wealthDeficit += 10 * world.ARMY_COST
+            elif(j == 'buildAirbase'):
+                self.wealthDeficit += 10 * world.AIR_COST
+            elif(j == 'buildNavalbase'):
+                self.wealthDeficit += 10 * world.NAVY_COST
+            elif(j == 'buildMarket'):
+                self.woodDeficit += 100
+                self.wealthDeficit += 100000
+            elif(j == 'buildMine'):
+                self.woodDeficit += 100
+                self.wealthDeficit += 100000000
+            elif(j == 'buildGrove'):
+                self.waterDeficit += 330932
+            elif(j == 'buildPowerplant'):
+                self.oreDeficit += 3
+                self.waterDeficit += 3
+                self.woodDeficit += 5
+            else:
+                pass
+
+            self.waterDeficit -= self.water
+            self.oreDeficit -= self.oreStorage + self.ore
+            self.woodDeficit -= self.woodStorage + self.wood
+            self.wealthDeficit -= self.wealth
 
         if self.waterDeficit < 0:
             self.waterDeficit = 0
@@ -567,7 +518,7 @@ class nation(object):
     def attackCity(self, city, enemyCity):
         """Commences a battle from one city to another"""
         enemy = enemyCity.owner
-        print('Commencing battle')
+        #print('Commencing battle')
         airDist = 0
         navalDist = 0
         landDist = 0
@@ -580,13 +531,19 @@ class nation(object):
             airDist = 99999999999
         if city.waterStr > 0:
             navalpath =  self.searchPath(city, enemyCity, True)
-            navalDist = len(navalpath)
-            navalEnd = navalpath[-1]
+            if navalpath != None:
+                navalDist = len(navalpath)
+                navalEnd = navalpath[-1]
+            else:
+                navalDist = 99999999
         else:
             navalDist = 999999999
         if city.landStr > 0:
             landpath = self.searchPath(city, enemyCity, False)
-            landDist = len(landpath)
+            if landpath != None:
+                landDist = len(landpath)
+            else:
+                landDist = 99999999
         else:
             landDist = 99999999
 
@@ -600,7 +557,7 @@ class nation(object):
         landPhase = 0
 
         if airDist <= city.airProj:
-            print('Beginning air phase')
+            #print('Beginning air phase')
             chance = city.airStr / (city.airStr + enemyCity.airStr + .001)
             while (city.airStr > 0 and enemyCity.airStr > 0):
                 battle = random.random()
@@ -610,11 +567,11 @@ class nation(object):
                     city.airStr -= 1
 
             airPhase = enemyCity.airStr - city.airStr
-            print('Air phase complete.  Result:', airPhase)
+            #print('Air phase complete.  Result:', airPhase)
 
             navalPhase += airPhase
         if navalDist <= city.waterProj:
-            print('Beginning naval phase')
+            #print('Beginning naval phase')
             chance = city.waterStr / (city.waterStr + enemyCity.waterStr + .001)
             while (city.waterStr > 0 and enemyCity.waterStr > 0):
                 battle = random.random()
@@ -624,10 +581,10 @@ class nation(object):
                     city.waterStr -= 1
 
             navalPhase += enemyCity.waterStr - city.waterStr
-            print('Naval phase complete.  Result:', navalPhase)
+            #print('Naval phase complete.  Result:', navalPhase)
             landPhase += navalPhase
         if landDist <= city.landProj:
-            print('Beginning land phase')
+            #print('Beginning land phase')
             chance = city.landStr / (city.landStr + enemyCity.landStr + .001)
             while (city.landStr > 0 and enemyCity.landStr > 0):
                 battle = random.random()
@@ -637,11 +594,11 @@ class nation(object):
                     city.landStr -= 1
 
             landPhase += enemyCity.landStr - city.landStr
-            print('Land phase complete.  Result:', landPhase)
+            #print('Land phase complete.  Result:', landPhase)
             
             
         if landPhase < 0:
-            print(self.name, 'wins battle!  Claiming land for', self.name)
+            #print(self.name, 'wins battle!  Claiming land for', self.name)
             if enemyCity.airStr < 0:
                 enemyCity.airStr = 0
             if enemyCity.waterStr < 0:
@@ -656,53 +613,74 @@ class nation(object):
                 if t.closestCity == enemyCity:
                     self.claimTile(t)
 
+            if enemy.cities == []:
+                print(enemy.name, 'has been destroyed by', self.name)
+                self.enemies.remove(enemy)
+                self.world.checkNation(enemy)
+
             return 1
         else:
             return 0
 
     def wageWar(self):
         """Wages a war against all enemies"""
+        if self.enemies != []:
+            print('Waging war for', self.name)
+
+        for e in self.enemies:
+            if e.cities == []:
+                self.enemies.remove(e)
+                e.enemies.remove(self)
+
         for e in self.enemies:
             for c in self.cities:
-                for ec in e.cities:
-                    if c.airStr + c.waterStr + c.landStr > 0:
-                        print(self.name, 'is launching attack against the city', '(' + str(ec.xCoor) + ', ' + str(ec.yCoor) + ')')
-                        self.attackCity(c, ec)
+                if c.airStr + c.waterStr + c.landStr > 0:
+                    #print(self.name, 'is launching an attack against the city', '(' + str(ec.xCoor) + ', ' + str(ec.yCoor) + ')')
+                    if e.cities != []:
+                        self.attackCity(c, e.cities[0])
 
     def gatherIntel(self, country):
         """Estimates military strength of target country as a function of distance"""
-        
-        startCity = self.cities[0]
-        endCity = country.cities[0]
-        p = self.searchPath(startCity, endCity, False)
-        distance = 0
-        strength = 0
-        if p == None:
-            sx = startCity.xCoor
-            sy = startCity.yCoor
-            ex = endCity.xCoor
-            ey = endCity.yCoor
-            distance = ((sx - ex)**2 + (sy - ey)**2)**.5
-            for t in country.tiles:
-                chance = 1.0 / (distance / 100.0 + 1.0 - self.tech / 1000)
-                nature = random.random()
-                if nature <= chance:
-                    strength += t.airStr + t.landStr + t.waterStr
-                else:
-                    noise = random.random() + .5
-                    strength += (t.airStr + t.landStr + t.waterStr) * noise
+        if country.strength == 0:
+            strength = 0
+            self.neighbors[country] = (strength, self.world.year)
+            return strength
+        elif country not in self.neighbors.keys() or self.world.year - self.neighbors[country][1] > 2:
+            startCity = self.cities[0]
+            endCity = country.cities[0]
+            p = self.searchPath(startCity, endCity, False)
+            distance = 0
+            strength = 0
+            if p == None:
+                sx = startCity.xCoor
+                sy = startCity.yCoor
+                ex = endCity.xCoor
+                ey = endCity.yCoor
+                distance = ((sx - ex)**2 + (sy - ey)**2)**.5
+                for t in country.tiles:
+                    chance = 1.0 / (distance / 100.0 + 1.0 - self.tech / 1000)
+                    nature = random.random()
+                    if nature <= chance:
+                        strength += t.airStr + t.landStr + t.waterStr
+                    else:
+                        noise = random.random() + .5
+                        strength += (t.airStr + t.landStr + t.waterStr) * noise
 
+            else:
+                distance = len(p)
+                for t in country.tiles:
+                    chance = 1.0 / (distance / 500.0 + 1.0 - self.tech / 1000)
+                    nature = random.random()
+                    if nature <= chance:
+                        strength += t.airStr + t.landStr + t.waterStr
+                    else:
+                        noise = random.random() + .5
+                        strength += (t.airStr + t.landStr + t.waterStr) * noise
+            self.neighbors[country] = (strength, self.world.year)
+            return strength
         else:
-            distance = len(p)
-            for t in country.tiles:
-                chance = 1.0 / (distance / 500.0 + 1.0 - self.tech / 1000)
-                nature = random.random()
-                if nature <= chance:
-                    strength += t.airStr + t.landStr + t.waterStr
-                else:
-                    noise = random.random() + .5
-                    strength += (t.airStr + t.landStr + t.waterStr) * noise
-        return strength
+            strength = self.neighbors[country][0]
+            return strength
 
     def calcWarOdds(self, eStrength):
         """Calculates odds of winning a war against target country"""
@@ -738,7 +716,6 @@ class nation(object):
                 distance = ((start.xCoor - end.xCoor)**2 + (start.yCoor - end.yCoor)**2)**.5
                 neighbors.append((n, distance))
                 
-
         neighbors = sorted(neighbors, key=itemgetter(1))
         closeNations = [x[0] for x in neighbors]
         neighbors = closeNations
@@ -773,11 +750,17 @@ class nation(object):
 
     def bargain(self, country, resource):
         """Calculates an acceptable offer for the desired resource"""
+        #print(self.name, 'is bargaining with', country.name, 'for', resource)
         world = self.world
+        #print(self.name, 'is gathering intel on', country.name)
         eStrength = self.gatherIntel(country)
+        #print('Collection complete')
         odds = self.calcWarOdds(eStrength)
+        
         costs = self.calcWarCost(eStrength)
         ourCost = costs[0]
+        for e in self.enemies:
+            ourCost += self.calcWarCost(e.strength)[0]
         theirCost = costs[1]
         value = 0
 
@@ -799,7 +782,7 @@ class nation(object):
         offer = upperBound
 
         self.sendOffer(offer = offer, resource = resource, country = country, status = 0)
-
+        #print('Offer sent to', country.name)
 
     def sendOffer(self, offer = 0, resource = 0, country = 0, status = 0, prevOffer = 0):
         """Sends an offer for the set price for the desired resource to another country"""
@@ -920,6 +903,8 @@ class nation(object):
                 odds = self.calcWarOdds(eStrength)
                 costs = self.calcWarCost(eStrength)
                 ourCost = costs[0]
+                for e in self.enemies:
+                    ourCost += self.calcWarCost(e.strength)[0]
                 theirCost = costs[1]
                 value = 0
 
