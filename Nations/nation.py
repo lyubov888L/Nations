@@ -21,15 +21,15 @@ class nation(object):
                  waterStr = 0,
                  nationality = '',
                  econStr = 0,
-                 tiles = [],
-                 cities = [],
-                 roads = set(),
-                 enemies = [],
+                 tiles = None,
+                 cities = None,
+                 roads = None,
+                 enemies = None,
                  name = '',
-                 borders = [],
+                 borders = None,
                  world = None,
                  readout = '',
-                 consQueue = [],
+                 consQueue = None,
                  foodStorage = 0,
                  oreStorage = 0,
                  woodStorage = 0,
@@ -40,9 +40,9 @@ class nation(object):
                  oreDeficit = 0,
                  woodDeficit = 0,
                  wealthDeficit = 0,
-                 offers = [],
-                 pendingOffers = [],
-                 neighbors = dict()):
+                 offers = None,
+                 pendingOffers = None,
+                 neighbors = None):
 
         self.color = color
         self.population = population
@@ -58,28 +58,67 @@ class nation(object):
         self.waterStr = waterStr
         self.nationality = nationality
         self.econStr = econStr
-        self.tiles = tiles
-        self.cities = cities
-        self.roads = roads
+
+        if not tiles:
+            self.tiles = []
+        else:
+            self.tiles = tiles
+
+        if not cities:
+            self.cities = []
+        else:
+            self.cities = cities
+
+        if not roads:
+            self.roads = set()
+        else:
+            self.roads = roads
+        
         self.name = name
-        self.borders = borders
+
+        if not borders:
+            self.borders = []
+        else:
+            self.borders = borders
+
         self.world = world
         self.readout = readout
-        self.consQueue = consQueue
+        if not consQueue:
+            self.consQueue = []
+        else:
+            self.consQueue = consQueue
+        
         self.foodStorage = foodStorage
         self.oreStorage = oreStorage
         self.woodStorage = woodStorage
         self.tech = tech
-        self.enemies = enemies
+
+        if not enemies:
+            self.enemies = []
+        else:
+            self.enemies = enemies
+
         self.strength = strength
         self.foodDeficit = foodDeficit
         self.waterDeficit = waterDeficit
         self.oreDeficit = oreDeficit
         self.woodDeficit = woodDeficit
         self.wealthDeficit = wealthDeficit
-        self.offers = offers
-        self.pendingOffers = pendingOffers
-        self.neighbors = neighbors
+
+        if not offers:
+            self.offers = []
+        else:
+            self.offers = offers
+
+        if not pendingOffers:
+            self.pendingOffers = []
+        else:
+            self.pendingOffers = pendingOffers
+        
+        if not neighbors:
+            self.neighbors = dict()
+        else:
+            self.neighbors = neighbors
     
                 
     def claimTile(self, t):
@@ -113,7 +152,7 @@ class nation(object):
 
     def findLimitingResource(self):
         """Finds the lowest producing resource"""
-        rgen = (self.food, self.water, self.wood, self.ore, self.econStr)
+        rgen = (self.food * self.world.FOOD_VAL, self.water * self.world.WATER_VAL, self.wood * self.world.WOOD_VAL, self.ore * self.world.ORE_VAL, self.wealth)
         minval = min(rgen)
         ind = rgen.index(minval)
         if ind == 0:

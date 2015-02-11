@@ -3,22 +3,18 @@ import pygame
 import random
 import math
 from nation import nation
-import cProfile as profile
 import time
 
 class world():
     """This is the world in which the simulation takes place"""
     def __init__(self, width=100, 
                  height=100, 
-                 tiles={}, 
-                 nations=[], 
-                 biomes={}, 
-                 biomeSize = 200, 
-                 subBiomeSize = 30, 
+                 tiles=None, 
+                 nations=None, 
+                 biomes=None, 
                  biomeStrength = .5,
-                 fuzzing = 1,
                  viewMode = 0,
-                 unclaimed = [],
+                 unclaimed = None,
                  year = 0,
                  WATER_VAL = 2,
                  WOOD_VAL = 200,
@@ -33,15 +29,30 @@ class world():
 
         self.width = width
         self.height = height
-        self.tiles = tiles
-        self.nations = nations
-        self.biomes = biomes
-        self.biomeSize = biomeSize
-        self.subBiomeSize = subBiomeSize
+
+        if not tiles:
+            self.tiles = {}
+        else:
+            self.tiles = tiles
+
+        if not nations:
+            self.nations = []
+        else:
+            self.nations = nations
+
+        if not biomes:
+            self.biomes = {}
+        else:
+            self.biomes = biomes
+
         self.biomeStrength = biomeStrength
-        self.fuzzing = fuzzing
         self.viewMode = viewMode
-        self.unclaimed = unclaimed
+
+        if not unclaimed:
+            self.unclaimed = []
+        else:
+            self.unclaimed = unclaimed
+
         self.year = year
         self.WATER_VAL = WATER_VAL
         self.WOOD_VAL = WOOD_VAL

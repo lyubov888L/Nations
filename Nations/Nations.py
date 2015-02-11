@@ -45,15 +45,19 @@ class PyManMain:
         scale = 1
         camPos = [0, 0]
 
+        w = self.width
+        h = self.height
+
+        screenArr = pygame.Surface((w, h))
+        screen.fill(pygame.Color(0,0,0))
+
         while True:
             if timer > 10000:
                 timer = 0
 
-            screen.fill(pygame.Color(0,0,0))
-            w = self.width
-            h = self.height
-
-            screenArr = pygame.PixelArray(screen)
+            #screen.fill(pygame.Color(0,0,0))
+            
+            #screenArr = pygame.PixelArray(screen)
             
             if scale == 1:
                 camPos = [0, 0]
@@ -81,11 +85,10 @@ class PyManMain:
                 for y in range(0, pHeight):
                     for a in range(x * scale, (x * scale) + scale):
                         for b in range(y * scale, (y * scale) + scale):
-                            screenArr[a][b] = preScreen[x][y]
+                            screenArr.set_at((a , b), preScreen[x][y])
 
-
-
-            del screenArr
+            #del screenArr
+            screen.blit(screenArr, (0, 0))
 
             msgSurfaceObj = self.fontObj.render(self.msg, False, self.red)
             msgRectObj = msgSurfaceObj.get_rect()
